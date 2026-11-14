@@ -1,417 +1,707 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Heat Capacity Experiment Tool — Cooling Focus</title>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <style>
-    :root { --accent:#0b6efd; --gray:#f7f7f7; --line:#ddd; }
-    body { font-family: Arial, sans-serif; margin: 22px; }
-    h1 { margin-bottom: 8px; }
-    h2 { margin: 18px 0 10px; }
-    h3 { margin: 14px 0 6px; }
-    textarea { width: 100%; height: 140px; }
-    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-    .input-box { margin: 6px 0; }
-    .input-box label { margin-right: 6px; }
-    .btn { background: var(--accent); color: #fff; border: 0; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
-    .btn.secondary { background: #555; }
-    .btn:disabled { background: #9ab9ff; cursor: not-allowed; }
-    .card { background: var(--gray); border: 1px solid var(--line); padding: 12px; margin-top: 14px; border-radius: 8px; }
-    .cols { display: flex; gap: 14px; }
-    .col { flex: 1 1 0; }
-    .muted { color:#444; font-size: 0.95em; }
-    .step { border-left: 4px solid var(--accent); padding-left: 12px; margin: 20px 0; }
-    .wizard-nav { display:flex; gap:10px; margin: 6px 0 0; flex-wrap: wrap; }
-    .wizard-nav .btn { background:#eee; color:#111; border:1px solid var(--line); }
-    .wizard-nav .btn.active { background: var(--accent); color:#fff; }
-    .hidden { display:none; }
-    .stat { display:inline-block; margin-right:12px; }
-    table.ua-grid { border-collapse: collapse; font-variant-numeric: tabular-nums; }
-    table.ua-grid th, table.ua-grid td { border: 1px solid #ccc; padding: 6px 8px; text-align: center; }
-    table.ua-grid th { position: sticky; top: 0; background: #fafafa; z-index: 1; }
-    table.ua-grid td:first-child, table.ua-grid th:first-child { position: sticky; left: 0; background: #fafafa; z-index: 2; }
-    fieldset { border:1px solid var(--line); padding:10px; border-radius:8px; }
-    legend { padding:0 6px; font-weight:bold; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hibernaculum Heat Tool</title>
+<meta name="description" content="Estimate heat exchange in a mine or cave from a fan trial, then simulate how far ventilation could cool it over a winter.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+<style>
+:root{
+  --bg:#050607; --panel:#0b0d10; --panel-2:#101318; --line:#1b2027; --line-2:#2a313a;
+  --fg:#eef1f4; --fg-2:#a3acb6; --fg-3:#636d78;
+  --ice:#9fd8ff; --ice-dim:rgba(159,216,255,.08);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+.hidden,[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--fg)}
+body{margin:0;font:400 14px/1.5 var(--f-body);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+a{color:var(--ice)}
+.wrap{max-width:1480px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+.lbl{font:500 10.5px/1.2 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--fg-3)}
+.mono{font-family:var(--f-mono)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:1px solid var(--ice);outline-offset:2px}
+
+/* header */
+header.top{position:sticky;top:0;z-index:5;background:rgba(5,6,7,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:14px 20px;padding-block:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:14px;margin-right:auto;text-decoration:none;color:inherit}
+.brand b{font:500 22px/1 var(--f-display);letter-spacing:.42em;padding-left:.1em}
+.brand span{font:400 11px/1 var(--f-body);letter-spacing:.2em;text-transform:uppercase;color:var(--fg-3)}
+.hstat{display:flex;flex-direction:column;gap:3px;min-width:0}
+.hstat .v{font:500 13px/1 var(--f-mono);color:var(--fg)}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid var(--line-2);font:500 10.5px/1 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--fg-2);text-decoration:none}
+.pill:hover{border-color:var(--fg-3);color:var(--fg)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--fg-3);flex:none;display:inline-block}
+.dot.good{background:var(--good)} .dot.warn{background:var(--warn)} .dot.crit{background:var(--crit)}
+
+/* tabs */
+nav.tabs{position:sticky;top:57px;z-index:4;background:rgba(5,6,7,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav.tabs .wrap{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;padding-block:0}
+nav.tabs .wrap::-webkit-scrollbar{display:none}
+nav.tabs button{flex:none;background:none;border:0;border-bottom:2px solid transparent;padding:12px 12px 10px;cursor:pointer;font:500 11px/1 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--fg-3);white-space:nowrap}
+nav.tabs button.active{color:var(--fg);border-bottom-color:var(--ice)}
+nav.tabs button:disabled{opacity:.35;cursor:not-allowed}
+nav.tabs button .dot{width:6px;height:6px;margin-right:7px;vertical-align:1px}
+
+/* sections */
+.sec{margin-top:22px}
+.sech{display:flex;align-items:baseline;gap:14px;margin-bottom:10px;flex-wrap:wrap}
+.sech h2{margin:0;font:400 13px/1 var(--f-display);letter-spacing:.32em;text-transform:uppercase;color:var(--fg)}
+.sech .note{font-size:12px;color:var(--fg-3)}
+.lead{color:var(--fg-2);max-width:820px;margin:18px 0 0;font-size:14.5px}
+.lead b{color:var(--fg);font-weight:500}
+
+/* overview tiles */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-top:18px}
+.tile{background:var(--panel);padding:14px 14px 13px;min-width:0;display:flex;flex-direction:column;gap:7px;cursor:pointer;text-align:left;border:0;color:inherit;font:inherit}
+.tile:hover{background:var(--panel-2)}
+.tile .th{display:flex;align-items:center;gap:8px;min-width:0}
+.tile .th .lbl{color:var(--fg-2)}
+.tile .th .tag{margin-left:auto}
+.tile .big{font:300 34px/1 var(--f-display)}
+.tile .big small{font-size:.45em;color:var(--fg-3);margin-left:3px}
+.tile .sub{font:400 11.5px/1.4 var(--f-mono);color:var(--fg-2)}
+.tile .sub em{font-style:normal;color:var(--fg-3)}
+.tile .st{font:500 10px/1 var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--fg-3);margin-top:auto;padding-top:4px}
+.tag{display:inline-flex;align-items:center;font:500 9.5px/1 var(--f-body);letter-spacing:.14em;text-transform:uppercase;padding:3px 6px;border:1px dashed var(--line-2);color:var(--fg-3);white-space:nowrap}
+.tag.exp{border-color:rgba(12,163,12,.55);color:#5fd35f;border-style:solid}
+.tag.man{border-color:rgba(250,178,25,.6);color:var(--warn)}
+.tag.ice{border-color:rgba(159,216,255,.5);color:var(--ice)}
+
+.stepsrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.stepc{background:var(--panel);padding:16px 18px}
+.stepc .n{font:300 30px/1 var(--f-display);color:var(--fg-3)}
+.stepc h3{margin:8px 0 6px;font:500 12px/1.2 var(--f-body);letter-spacing:.16em;text-transform:uppercase}
+.stepc p{margin:0;color:var(--fg-2);font-size:13px}
+
+/* cards & forms */
+.card{background:var(--panel);border:1px solid var(--line);padding:16px 18px 18px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.card h3{margin:0;font:500 12px/1 var(--f-body);letter-spacing:.18em;text-transform:uppercase;color:var(--fg);display:flex;align-items:center;gap:10px}
+.card h3 .tag{margin-left:auto}
+.split{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:12px;align-items:start}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 12px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label,.fl{font:500 10px/1.2 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--fg-3)}
+input[type=number],input[type=text],input[type=date],textarea{background:var(--bg);border:1px solid var(--line-2);color:var(--fg);padding:8px 10px;font:400 13px var(--f-mono);width:100%;border-radius:0;color-scheme:dark}
+input:focus,textarea:focus{border-color:var(--ice);outline:none}
+textarea{min-height:150px;resize:vertical;font-size:12px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.btn{background:var(--fg);color:var(--bg);border:0;padding:10px 14px;cursor:pointer;font:600 11px/1 var(--f-body);letter-spacing:.14em;text-transform:uppercase}
+.btn:hover{background:#fff}
+.btn.ghost{background:none;color:var(--fg-2);border:1px solid var(--line-2)}
+.btn.ghost:hover{color:var(--fg);border-color:var(--fg-3)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.note2{font-size:12.5px;color:var(--fg-3);line-height:1.55}
+.note2 b{color:var(--fg-2);font-weight:500}
+code{font-family:var(--f-mono);color:var(--fg-2);font-size:12px}
+fieldset{border:1px solid var(--line-2);padding:12px;margin:0;display:flex;flex-direction:column;gap:10px}
+legend{padding:0 6px;font:500 10px/1 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--fg-2)}
+.opt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--fg-2)}
+.opt input[type=number]{width:120px}
+input[type=radio],input[type=checkbox]{accent-color:var(--ice)}
+
+/* plots & results */
+.plot{background:var(--panel);border:1px solid var(--line);min-height:120px}
+.plot:empty::before{content:attr(data-empty);display:block;padding:40px 18px;text-align:center;color:var(--fg-3);font:500 10.5px/1.4 var(--f-body);letter-spacing:.16em;text-transform:uppercase}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.kpi{background:var(--panel);padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.kpi .big{font:300 34px/1 var(--f-display)}
+.kpi .big small{font-size:.45em;color:var(--fg-3);margin-left:3px}
+.kpi .sub{font:400 11.5px/1.4 var(--f-mono);color:var(--fg-2)}
+.status{font:400 12px/1.4 var(--f-mono);color:var(--fg-2)}
+
+/* steady-state table */
+.tablewrap{overflow-x:auto;border:1px solid var(--line)}
+table.ua-grid{border-collapse:collapse;font:400 12.5px var(--f-mono);width:100%}
+table.ua-grid th,table.ua-grid td{border:1px solid var(--bg);padding:7px 10px;text-align:center;white-space:nowrap}
+table.ua-grid th{background:var(--panel-2);color:var(--fg-2);font:500 10.5px/1 var(--f-body);letter-spacing:.12em;text-transform:uppercase;position:sticky;top:0}
+table.ua-grid tr th:first-child{position:sticky;left:0;font-family:var(--f-mono);letter-spacing:0;font-size:12.5px;color:var(--fg)}
+.legendbar{display:flex;align-items:center;gap:10px;font:400 11px var(--f-mono);color:var(--fg-3)}
+.legendbar i{flex:0 0 160px;height:6px;background:linear-gradient(90deg,hsl(220,70%,45%),hsl(110,70%,45%),hsl(0,70%,45%))}
+
+/* column chooser */
+#columnSelectors{background:var(--panel-2);border:1px solid var(--line-2);padding:14px}
+#columnSelectors h3{margin:0 0 10px;font:500 11px/1 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--fg-2)}
+#columnSelectors .row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px}
+#columnSelectors label{font-size:13px;color:var(--fg-2)}
+#resultsBody{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+#resultsBody .col{background:var(--panel);padding:14px 16px}
+#resultsBody h3{margin:0 0 8px;font:500 10.5px/1 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--fg-3)}
+#resultsBody .stat{font:300 30px/1.1 var(--f-display)}
+#resultsBody .stat b{display:none}
+#resultsBody .muted{font-size:13px;color:var(--fg-2)}
+
+/* method */
+.formula{font:400 19px/1.7 "Cambria Math","STIX Two Math","Latin Modern Math","Times New Roman",serif;color:var(--fg);background:var(--bg);border:1px solid var(--line-2);padding:14px 12px;text-align:center;overflow-x:auto}
+.formula sub,.formula sup{font-size:.68em}
+.formula var{font-style:italic}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+
+footer.foot{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;display:flex;gap:18px;flex-wrap:wrap;justify-content:space-between;font-size:12px;color:var(--fg-3)}
+
+@media (max-width:1000px){
+  .tiles,.stepsrow{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .split,.grid2{grid-template-columns:1fr}
+}
+@media (max-width:620px){
+  .tiles,.stepsrow{grid-template-columns:1fr}
+  .top .hstat{display:none}
+  .brand span{display:none}
+  #columnSelectors .row{grid-template-columns:1fr}
+}
+</style>
 </head>
 <body>
-  <h1>Heat Capacity Experiment Tool</h1>
-  <div class="muted">
-    1) explore steady-state with U·A and airflow (cooling focus),<br>
-    2) compute C<sub>room</sub> & UA from experiment (wide multi-logger),<br>
-    3) sanity-check with a local simulation,<br>
-    4) weather-driven seasonal simulation (manual UA/C<sub>room</sub> supported).
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#" onclick="showStep(0);return false;"><b>THERMAL</b><span>Hibernaculum heat-exchange tool</span></a>
+    <div class="hstat"><span class="lbl">UA</span><span class="v" id="hUA">—</span></div>
+    <div class="hstat"><span class="lbl">C<sub>room</sub></span><span class="v" id="hC">—</span></div>
+    <div class="hstat"><span class="lbl">Source</span><span class="v" id="hSrc">none yet</span></div>
+    <a class="pill" href="https://tannermbarnes.github.io/">T. M. Barnes ↗</a>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Steps">
+  <div class="wrap">
+    <button id="tab0" class="active" onclick="showStep(0)">Overview</button>
+    <button id="tab1" onclick="showStep(1)"><span class="dot" id="ld1"></span>1 · Steady state</button>
+    <button id="tab2" onclick="showStep(2)"><span class="dot" id="ld2"></span>2 · Fan experiment</button>
+    <button id="tab3" onclick="showStep(3)" disabled><span class="dot" id="ld3"></span>3 · Local simulation</button>
+    <button id="tab4" onclick="showStep(4)"><span class="dot" id="ld4"></span>4 · Season</button>
+    <button id="tab5" onclick="showStep(5)">Method</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<!-- OVERVIEW -->
+<section id="step0">
+  <p class="lead">Estimate how a sealed section of a mine or cave exchanges heat, then ask how cold ventilation could make it. Measure the room's <b>thermal mass (C<sub>room</sub>)</b> and <b>conductance to the rock (UA)</b> from a simple fan trial, then drive the model with real hourly weather for a whole winter.</p>
+
+  <div class="tiles">
+    <button class="tile" onclick="showStep(1)">
+      <div class="th"><span class="dot" id="oDot1"></span><span class="lbl">Steady state</span><span class="tag" id="oTag1">Step 1</span></div>
+      <div class="big" id="oSS">—<small>°C</small></div>
+      <div class="sub" id="oSSsub">—</div>
+      <div class="st">Open ›</div>
+    </button>
+    <button class="tile" onclick="showStep(2)">
+      <div class="th"><span class="dot" id="oDotC"></span><span class="lbl">Thermal mass C<sub>room</sub></span><span class="tag" id="oTagC">Not set</span></div>
+      <div class="big" id="oC">—<small>kJ/K</small></div>
+      <div class="sub" id="oCsub">Select the Initial window in step 2</div>
+      <div class="st">Open ›</div>
+    </button>
+    <button class="tile" onclick="showStep(2)">
+      <div class="th"><span class="dot" id="oDotUA"></span><span class="lbl">Conductance UA</span><span class="tag" id="oTagUA">Not set</span></div>
+      <div class="big" id="oUA">—<small>W/K</small></div>
+      <div class="sub" id="oUAsub">Select the Return window in step 2</div>
+      <div class="st">Open ›</div>
+    </button>
+    <button class="tile" onclick="showStep(4)">
+      <div class="th"><span class="dot" id="oDotS"></span><span class="lbl">Season in 2–6 °C</span><span class="tag" id="oTagS">Step 4</span></div>
+      <div class="big" id="oS">—<small>%</small></div>
+      <div class="sub" id="oSsub">Run a seasonal simulation</div>
+      <div class="st">Open ›</div>
+    </button>
   </div>
 
-  <!-- Wizard nav -->
-  <div class="wizard-nav">
-    <button id="tab1" class="btn active" onclick="showStep(1)">Step 1 · Direct UA</button>
-    <button id="tab2" class="btn" onclick="showStep(2)">Step 2 · Experiment</button>
-    <button id="tab3" class="btn" onclick="showStep(3)" disabled>Step 3 · Local Simulation</button>
-    <button id="tab4" class="btn" onclick="showStep(4)">Step 4 · Weather Simulation</button>
+  <div class="sec">
+    <div class="sech"><h2>How it works</h2><span class="note">Steps 1 and 4 work on their own with manual values; steps 2 and 3 use a fan trial.</span></div>
+    <div class="stepsrow">
+      <div class="stepc"><div class="n">01</div><h3>Steady state</h3><p>From an assumed U and A, tabulate the temperature the room settles at for a range of outside temperatures and airflows.</p></div>
+      <div class="stepc"><div class="n">02</div><h3>Fan experiment</h3><p>Paste logger data from a fan trial. Fit the cooling (Initial) and recovery (Return) slopes to estimate C<sub>room</sub> and UA.</p></div>
+      <div class="stepc"><div class="n">03</div><h3>Local simulation</h3><p>Check the fitted values by simulating a short run at a fixed outside temperature and airflow.</p></div>
+      <div class="stepc"><div class="n">04</div><h3>Season</h3><p>Pull hourly weather for any location and date range and simulate the internal temperature across a winter.</p></div>
+    </div>
   </div>
+</section>
 
-  <!-- STEP 1: DIRECT UA (cooling focus) -->
-  <section id="step1" class="step">
-    <h2>Step 1 — Direct UA Steady-State (cooling)</h2>
-    <div class="card">
-      <div class="row">
-        <div class="input-box"><label>U (W/m²·K):</label><input type="number" id="Uinput" value="5" step="0.1" /></div>
-        <div class="input-box"><label>A (m²):</label><input type="number" id="Ainput" value="100" step="1" /></div>
-        <div class="input-box"><label>Internal T<sub>site</sub> (°C):</label><input type="number" id="uaTinternal" value="7.7" step="0.1" /></div>
-      </div>
-      <div class="row">
-        <div class="input-box"><label>External base T<sub>ext</sub> (°C):</label><input type="number" id="uaTextBase" value="-4" step="1" /></div>
-        <div class="input-box"><label>Baseline Airflow (CFM):</label><input type="number" id="uaCFMbase" value="240" step="1" /></div>
-      </div>
-      <button class="btn" onclick="runDirectUA()">Generate Table (T<sub>ext</sub> ± 7 °C; CFM × [1, 1.5, 2.0, 2.5, 3.0])</button>
-      <div class="muted" style="margin-top:6px;">Cells color-coded: <b>red = warmest</b> → <b>blue = coolest</b>.</div>
-      <div id="uaTable" class="card" style="background:#fff; overflow-x:auto;"></div>
-    </div>
-  </section>
-
-  <!-- STEP 2: MULTI-LOGGER (WIDE INPUT) -->
-  <section id="step2" class="step hidden">
-    <h2>Step 2 — Experimental Data (Wide format: one datetime + multiple temps)</h2>
-    <div class="card">
-      <p>
-        Paste a wide table with one datetime column and one column per logger.<br>
-        Example (CSV): <code>datetime,External,Int1,Int2</code>
-      </p>
-      <textarea id="wideData" placeholder="datetime,External,Int1,Int2&#10;11/01/2024 15:00:00,9.2,7.8,7.7&#10;11/01/2024 15:10:00,9.1,7.9,7.8"></textarea>
-      <div class="row" style="margin-top:8px;">
-        <button class="btn" onclick="parseWideAndSetup()">Parse & Choose Columns</button>
-        <button class="btn secondary" onclick="resetSelections()">Reset Tangent Fits</button>
-      </div>
-
-      <div id="columnSelectors" class="card hidden" style="background:#fff;"></div>
-
-      <div class="row">
-        <div class="input-box"><label>Duct dia (in):</label><input type="number" id="ductDiameter" value="12" step="0.1" /></div>
-        <div class="input-box"><label>Airspeed (MPH):</label><input type="number" id="airspeed" value="4" step="0.1" /></div>
-        <div class="input-box"><label>CFM (optional):</label><input type="number" id="cfm" /></div>
-      </div>
-
-      <div id="graph" class="card" style="background:#fff; position:relative; z-index:0;"></div>
-
-      <div id="results" class="card" style="position:relative; z-index:0;">
-        <h3>Results</h3>
-        <div id="resultsBody" class="cols">
-          <div class="col"><div class="muted">Select two windows on <b>Internal Avg</b> (blue): first = <i>Initial</i>, second = <i>Return</i>.</div></div>
+<!-- STEP 1 -->
+<section id="step1" class="hidden">
+  <div class="sec">
+    <div class="sech"><h2>Step 1 · Direct UA steady state</h2><span class="note">Cooling focus. Outside temperature ± 7 °C; airflow × 1, 1.5, 2, 2.5, 3.</span></div>
+    <div class="split">
+      <div class="card">
+        <h3>Inputs</h3>
+        <div class="fields">
+          <div class="field"><label for="Uinput">U (W/m²·K)</label><input type="number" id="Uinput" value="5" step="0.1"></div>
+          <div class="field"><label for="Ainput">A (m²)</label><input type="number" id="Ainput" value="100" step="1"></div>
+          <div class="field"><label for="uaTinternal">Internal T<sub>site</sub> (°C)</label><input type="number" id="uaTinternal" value="7.7" step="0.1"></div>
+          <div class="field"><label for="uaTextBase">Outside base T<sub>ext</sub> (°C)</label><input type="number" id="uaTextBase" value="-4" step="1"></div>
+          <div class="field"><label for="uaCFMbase">Baseline airflow (CFM)</label><input type="number" id="uaCFMbase" value="240" step="1"></div>
         </div>
+        <div class="btnrow"><button class="btn" onclick="runDirectUA()">Generate table</button></div>
+        <div class="legendbar"><span>coolest</span><i></i><span>warmest</span></div>
       </div>
-
-      <div style="margin-top:8px;">
-        <button id="nextToStep3" class="btn" onclick="showStep(3)" disabled>Next → Step 3 (Local Simulation)</button>
+      <div class="card">
+        <h3>Steady-state internal temperature (°C) <span class="tag ice" id="uaTag">UA —</span></h3>
+        <div id="uaTable" class="tablewrap"></div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- STEP 3: LOCAL SIM -->
-  <section id="step3" class="step hidden">
-    <h2>Step 3 — Local Simulation (using C<sub>room</sub> & UA from Step 2)</h2>
-    <div class="card">
-      <div class="row">
-        <div class="input-box"><label>T<sub>0</sub> (°C):</label><input type="number" id="simT0" value="7.8" /></div>
-        <div class="input-box"><label>T<sub>a</sub> (°C):</label><input type="number" id="simTa" value="15" /></div>
-        <div class="input-box"><label>T<sub>r</sub> (°C):</label><input type="number" id="simTr" value="7.8" /></div>
-        <div class="input-box"><label>Duration (h):</label><input type="number" id="simHours" value="4" /></div>
-        <div class="input-box"><label>Airflow (CFM):</label><input type="number" id="simCFM" value="240" /></div>
-      </div>
-      <button class="btn" onclick="runLocalSimulation()">Run</button>
-      <div id="simPlot" class="card" style="background:#fff;"></div>
-      <div id="simStats" class="muted"></div>
-    </div>
-  </section>
-
-  <!-- STEP 4: WEATHER SIM WITH UA/Croom OVERRIDES -->
-  <section id="step4" class="step hidden">
-    <h2>Step 4 — Seasonal Simulation (Open-Meteo hourly weather)</h2>
-    <div class="card">
-      <div class="row">
-        <div class="input-box"><label>Location (city or "lat,lon"):</label><input type="text" id="locInput" value="Houghton, MI" /></div>
-        <div class="input-box"><label>Start date:</label><input type="date" id="startDate" value="2024-11-01" /></div>
-        <div class="input-box"><label>End date:</label><input type="date" id="endDate" value="2025-04-30" /></div>
-      </div>
-
-      <fieldset style="margin-top:8px;">
-        <legend>UA source</legend>
-        <div class="row">
-          <label><input type="radio" name="uaSrc" value="step2" id="uaSrc_step2" checked> Use UA from Step 2 (if available)</label>
-          <label><input type="radio" name="uaSrc" value="manualUA"> Manual UA (W/K)</label>
-          <input type="number" id="uaManual" placeholder="e.g., 150" step="0.1" style="width:120px;">
-          <label><input type="radio" name="uaSrc" value="manualUandA"> Manual U × A</label>
-          <span>U: <input type="number" id="uManual" step="0.1" style="width:90px;"></span>
-          <span>A: <input type="number" id="aManual" step="0.1" style="width:90px;"></span>
+<!-- STEP 2 -->
+<section id="step2" class="hidden">
+  <div class="sec">
+    <div class="sech"><h2>Step 2 · Fan experiment</h2><span class="note">Wide format: one datetime column, then one column per logger.</span></div>
+    <div class="split">
+      <div class="card">
+        <h3>Logger data</h3>
+        <p class="note2">Paste CSV or tab-separated data, e.g. <code>datetime,External,Int1,Int2</code>.</p>
+        <textarea id="wideData" placeholder="datetime,External,Int1,Int2&#10;11/01/2024 15:00:00,9.2,7.8,7.7&#10;11/01/2024 15:10:00,9.1,7.9,7.8"></textarea>
+        <div class="btnrow">
+          <button class="btn" onclick="parseWideAndSetup()">Parse &amp; choose columns</button>
+          <button class="btn ghost" onclick="resetSelections()">Reset tangent fits</button>
         </div>
-      </fieldset>
-
-      <fieldset style="margin-top:8px;">
-        <legend>C<sub>room</sub> source</legend>
-        <div class="row">
-          <label><input type="radio" name="cSrc" value="step2" id="cSrc_step2" checked> Use C<sub>room</sub> from Step 2 (if available)</label>
-          <label><input type="radio" name="cSrc" value="manual"> Manual C<sub>room</sub> (kJ/K)</label>
-          <input type="number" id="cManual" placeholder="e.g., 5000" step="1" style="width:120px;">
+        <div id="columnSelectors" class="hidden"></div>
+        <h3>Airflow during the trial</h3>
+        <div class="fields">
+          <div class="field"><label for="ductDiameter">Duct dia (in)</label><input type="number" id="ductDiameter" value="12" step="0.1"></div>
+          <div class="field"><label for="airspeed">Airspeed (mph)</label><input type="number" id="airspeed" value="4" step="0.1"></div>
+          <div class="field"><label for="cfm">CFM (optional)</label><input type="number" id="cfm"></div>
         </div>
-      </fieldset>
-
-      <div class="row" style="margin-top:8px;">
-        <div class="input-box"><label>T<sub>0</sub> (°C):</label><input type="number" id="seasonT0" value="7.8" /></div>
-        <div class="input-box"><label>T<sub>r</sub> (°C):</label><input type="number" id="seasonTr" value="7.8" /></div>
-        <div class="input-box"><label>Airflow (CFM):</label><input type="number" id="seasonCFM" value="240" step="1" /></div>
+        <p class="note2">If CFM is given it is used; otherwise flow = airspeed × duct area.</p>
       </div>
-
-      <button id="runSeasonalBtn" class="btn" onclick="runSeasonal()">Fetch Weather + Run Seasonal Simulation</button>
-      <div id="seasonStatus" class="muted" style="margin-top:6px;"></div>
-      <div id="seasonPlot" class="card" style="background:#fff;"></div>
-      <div id="seasonStats" class="muted"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+        <div class="plot" id="graph" data-empty="Parse data to plot"></div>
+        <p class="note2"><b>How to fit:</b> use box select on the plot to drag across two windows of the <b>Internal Avg</b> line. The first window is <i>Initial</i> (fan on, room changing) and gives C<sub>room</sub>; the second is <i>Return</i> (fan off, room recovering) and gives UA.</p>
+        <div id="results">
+          <div id="resultsBody">
+            <div class="col"><div class="muted">Select two windows on <b>Internal Avg</b>: first = <i>Initial</i>, second = <i>Return</i>.</div></div>
+          </div>
+        </div>
+        <div class="btnrow"><button id="nextToStep3" class="btn" onclick="showStep(3)" disabled>Next · Step 3 local simulation</button></div>
+      </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <script>
-    /* ---- constants ---- */
-    const cp  = 1005;          // J/kg·K
-    const rho = 1.225;         // kg/m³
-    const CFM_TO_M3S = 0.00047194745;
+<!-- STEP 3 -->
+<section id="step3" class="hidden">
+  <div class="sec">
+    <div class="sech"><h2>Step 3 · Local simulation</h2><span class="note">Uses C<sub>room</sub> and UA from step 2.</span></div>
+    <div class="split">
+      <div class="card">
+        <h3>Inputs</h3>
+        <div class="fields">
+          <div class="field"><label for="simT0">T<sub>0</sub> start (°C)</label><input type="number" id="simT0" value="7.8"></div>
+          <div class="field"><label for="simTa">T<sub>a</sub> outside (°C)</label><input type="number" id="simTa" value="15"></div>
+          <div class="field"><label for="simTr">T<sub>r</sub> rock (°C)</label><input type="number" id="simTr" value="7.8"></div>
+          <div class="field"><label for="simHours">Duration (h)</label><input type="number" id="simHours" value="4"></div>
+          <div class="field"><label for="simCFM">Airflow (CFM)</label><input type="number" id="simCFM" value="240"></div>
+        </div>
+        <div class="btnrow"><button class="btn" onclick="runLocalSimulation()">Run</button></div>
+        <div id="simStats" class="status"></div>
+      </div>
+      <div class="plot" id="simPlot" data-empty="Run to plot"></div>
+    </div>
+  </div>
+</section>
 
-    /* ---- globals (Step 2) ---- */
-    let firstSelection=null, secondSelection=null;
-    let timesMs=[], mins=[], columns=[], colNames=[];
-    let extColIndex=1;
-    let internalColIndices=[];
-    let extSeries=[], avgSeries=[];
-    let gdRef=null;
+<!-- STEP 4 -->
+<section id="step4" class="hidden">
+  <div class="sec">
+    <div class="sech"><h2>Step 4 · Seasonal simulation</h2><span class="note">Hourly outside temperature from Open-Meteo (archive for past dates, forecast for future dates).</span></div>
+    <div class="split">
+      <div class="card">
+        <h3>Weather</h3>
+        <div class="fields">
+          <div class="field" style="grid-column:1/-1"><label for="locInput">Location (city or "lat,lon")</label><input type="text" id="locInput" value="Houghton, MI"></div>
+          <div class="field"><label for="startDate">Start date</label><input type="date" id="startDate" value="2024-11-01"></div>
+          <div class="field"><label for="endDate">End date</label><input type="date" id="endDate" value="2025-04-30"></div>
+        </div>
+        <fieldset>
+          <legend>UA source</legend>
+          <label class="opt"><input type="radio" name="uaSrc" value="step2" id="uaSrc_step2" checked> From step 2 (if available)</label>
+          <label class="opt"><input type="radio" name="uaSrc" value="manualUA"> Manual UA (W/K) <input type="number" id="uaManual" placeholder="e.g. 150" step="0.1"></label>
+          <label class="opt"><input type="radio" name="uaSrc" value="manualUandA"> Manual U × A
+            <input type="number" id="uManual" placeholder="U" step="0.1" style="width:80px">
+            <input type="number" id="aManual" placeholder="A" step="0.1" style="width:80px"></label>
+        </fieldset>
+        <fieldset>
+          <legend>C<sub>room</sub> source</legend>
+          <label class="opt"><input type="radio" name="cSrc" value="step2" id="cSrc_step2" checked> From step 2 (if available)</label>
+          <label class="opt"><input type="radio" name="cSrc" value="manual"> Manual C<sub>room</sub> (kJ/K) <input type="number" id="cManual" placeholder="e.g. 5000" step="1"></label>
+        </fieldset>
+        <div class="fields">
+          <div class="field"><label for="seasonT0">T<sub>0</sub> start (°C)</label><input type="number" id="seasonT0" value="7.8"></div>
+          <div class="field"><label for="seasonTr">T<sub>r</sub> rock (°C)</label><input type="number" id="seasonTr" value="7.8"></div>
+          <div class="field"><label for="seasonCFM">Airflow (CFM)</label><input type="number" id="seasonCFM" value="240" step="1"></div>
+        </div>
+        <div class="btnrow"><button id="runSeasonalBtn" class="btn" onclick="runSeasonal()">Fetch weather + run</button></div>
+        <div id="seasonStatus" class="status"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+        <div class="plot" id="seasonPlot" data-empty="Run to plot"></div>
+        <div id="seasonStats"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- METHOD -->
+<section id="step5" class="hidden">
+  <div class="sec">
+    <div class="sech"><h2>Method</h2><span class="note">A single well-mixed air volume exchanging heat with ventilation air and with the surrounding rock.</span></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Ventilation heat capacity rate</h3>
+        <div class="formula"><var>ṁc<sub>p</sub></var> = <var>ρ</var> <var>Q</var> <var>c<sub>p</sub></var></div>
+        <p class="note2"><var>Q</var> is airflow (m³/s; 1 CFM = 4.719 × 10⁻⁴ m³/s), <var>ρ</var> = 1.225 kg/m³, <var>c<sub>p</sub></var> = 1005 J/kg·K.</p>
+      </div>
+      <div class="card">
+        <h3>Steady state (steps 1, 3, 4)</h3>
+        <div class="formula"><var>T</var><sub>ss</sub> = (<var>ṁc<sub>p</sub></var> <var>T</var><sub>a</sub> + UA <var>T</var><sub>r</sub>) / (<var>ṁc<sub>p</sub></var> + UA)</div>
+        <p class="note2">The room settles between the outside air temperature <var>T</var><sub>a</sub> and the rock temperature <var>T</var><sub>r</sub>, weighted by airflow and conductance.</p>
+      </div>
+      <div class="card">
+        <h3>Thermal mass from the Initial window</h3>
+        <div class="formula"><var>C</var><sub>room</sub> = | <var>ṁc<sub>p</sub></var> · mean(<var>T</var><sub>ext</sub> − <var>T</var><sub>int</sub>) / (d<var>T</var><sub>int</sub>/d<var>t</var>) |</div>
+        <p class="note2">The slope is a linear fit to Internal Avg over the selected points; the temperature difference is averaged over the same points.</p>
+      </div>
+      <div class="card">
+        <h3>Conductance from the Return window</h3>
+        <div class="formula">UA = <var>C</var><sub>room</sub> · |d<var>T</var><sub>int</sub>/d<var>t</var>| / |<var>T</var><sub>now</sub> − <var>T</var><sub>init</sub>|</div>
+        <p class="note2"><var>T</var><sub>init</sub> is Internal Avg at the start of the Initial window; <var>T</var><sub>now</sub> is Internal Avg at the start of the Return window.</p>
+      </div>
+      <div class="card" style="grid-column:1/-1">
+        <h3>Time course (steps 3 and 4)</h3>
+        <div class="formula"><var>T</var>(<var>t</var>) = <var>T</var><sub>ss</sub> + (<var>T</var><sub>0</sub> − <var>T</var><sub>ss</sub>) · exp(−(<var>ṁc<sub>p</sub></var> + UA) <var>t</var> / <var>C</var><sub>room</sub>)</div>
+        <p class="note2">Step 4 applies this hour by hour, recomputing <var>T</var><sub>ss</sub> from each hour's outside temperature. The 2–6 °C band reported in step 4 is a summary target, not a model output.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <span>Built by <a href="https://tannermbarnes.github.io/">Tanner M. Barnes</a>, Wolfe Lab, Michigan Technological University.</span>
+  <span>Weather: <a href="https://open-meteo.com/">Open-Meteo</a>. Plots: Plotly.</span>
+</footer>
+</main>
+
+<script>
+/* ---- constants ---- */
+const cp  = 1005;          // J/kg·K
+const rho = 1.225;         // kg/m³
+const CFM_TO_M3S = 0.00047194745;
+
+/* ---- globals (Step 2) ---- */
+let firstSelection=null, secondSelection=null;
+let timesMs=[], mins=[], columns=[], colNames=[];
+let extColIndex=1;
+let internalColIndices=[];
+let extSeries=[], avgSeries=[];
+let gdRef=null;
 let baselineInternalT = null; // °C, captured from Initial window start
+let lastSS=null, lastSeason=null;
 
+/* ---- dark plot theme (TORPOR palette) ---- */
+const AX={gridcolor:'#1b2027',zerolinecolor:'#2a313a',linecolor:'#2a313a',tickfont:{family:'IBM Plex Mono, monospace',size:11,color:'#a3acb6'},title:{font:{size:11,color:'#636d78'}}};
+function darkLayout(l){
+  const out=Object.assign({
+    paper_bgcolor:'#0b0d10', plot_bgcolor:'#0b0d10',
+    font:{family:'Barlow, Arial, sans-serif',color:'#a3acb6',size:12},
+    margin:{l:56,r:56,t:44,b:48},
+    legend:{orientation:'h',y:-0.2,font:{size:11}},
+    hoverlabel:{bgcolor:'#101318',bordercolor:'#2a313a',font:{family:'IBM Plex Mono, monospace',color:'#eef1f4'}},
+    title:{font:{family:'Barlow Condensed, Arial Narrow, sans-serif',size:15,color:'#eef1f4'},x:0.02}
+  }, l);
+  if (typeof out.title==='string') out.title={text:out.title,font:{family:'Barlow Condensed, Arial Narrow, sans-serif',size:15,color:'#eef1f4'},x:0.02};
+  ['xaxis','yaxis','yaxis2'].forEach(k=>{
+    if (!out[k]) return;
+    const t=out[k].title; out[k]=Object.assign({},AX,out[k]);
+    if (typeof t==='string') out[k].title={text:t,font:{size:11,color:'#636d78'}};
+  });
+  return out;
+}
+const PCFG={responsive:true,displaylogo:false};
 
-    /* ---- utils ---- */
-    function showStep(n){
-      for (let i=1;i<=4;i++){
-        const s=document.getElementById('step'+i), t=document.getElementById('tab'+i);
-        if (t.disabled && n===i) return;
-        s.classList.toggle('hidden', n!==i);
-        t.classList.toggle('active', n===i);
+/* ---- utils ---- */
+function showStep(n){
+  for (let i=0;i<=5;i++){
+    const s=document.getElementById('step'+i), t=document.getElementById('tab'+i);
+    if (t.disabled && n===i) return;
+  }
+  for (let i=0;i<=5;i++){
+    document.getElementById('step'+i).classList.toggle('hidden', n!==i);
+    document.getElementById('tab'+i).classList.toggle('active', n===i);
+  }
+  window.scrollTo({top:0});
+  // Plotly needs a resize when a hidden plot becomes visible
+  ['graph','simPlot','seasonPlot'].forEach(id=>{const el=document.getElementById(id); if(el && el.data) Plotly.Plots.resize(el);});
+}
+function fmt(num,d=2){ return (isFinite(num)? Number(num).toFixed(d) : '—'); }
+function mphToMps(mph){ return mph*0.44704; }
+function inchesToMeters(inches){ return inches*0.0254; }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function toNumOrNull(x){ const v=parseFloat(x); return Number.isFinite(v)?v:null; }
+function setDot(id,cls){ const el=document.getElementById(id); if(el) el.className='dot'+(cls?' '+cls:''); }
+
+/* ---- overview / header state ---- */
+function refreshOverview(){
+  const C=firstSelection && Number.isFinite(firstSelection.Croom) ? firstSelection.Croom : null;
+  const UA=secondSelection && Number.isFinite(secondSelection.UA) ? secondSelection.UA : null;
+  document.getElementById('hC').textContent = C!==null ? fmt(C,1)+' kJ/K' : '—';
+  document.getElementById('hUA').textContent = UA!==null ? fmt(UA,1)+' W/K' : '—';
+  document.getElementById('hSrc').textContent = (C!==null||UA!==null) ? 'fan experiment' : 'none yet';
+
+  document.getElementById('oC').innerHTML = (C!==null?fmt(C,1):'—')+'<small>kJ/K</small>';
+  document.getElementById('oCsub').innerHTML = C!==null ? '<em>FROM</em> Initial window fit' : 'Select the Initial window in step 2';
+  document.getElementById('oTagC').textContent = C!==null ? 'Experiment' : 'Not set';
+  document.getElementById('oTagC').className = 'tag'+(C!==null?' exp':'');
+  setDot('oDotC', C!==null?'good':''); setDot('ld2', (C!==null&&UA!==null)?'good':(C!==null?'warn':''));
+
+  document.getElementById('oUA').innerHTML = (UA!==null?fmt(UA,1):'—')+'<small>W/K</small>';
+  document.getElementById('oUAsub').innerHTML = UA!==null ? '<em>FROM</em> Return window fit' : 'Select the Return window in step 2';
+  document.getElementById('oTagUA').textContent = UA!==null ? 'Experiment' : 'Not set';
+  document.getElementById('oTagUA').className = 'tag'+(UA!==null?' exp':'');
+  setDot('oDotUA', UA!==null?'good':'');
+
+  if (lastSS){
+    document.getElementById('oSS').innerHTML = fmt(lastSS.Tss,1)+'<small>°C</small>';
+    document.getElementById('oSSsub').innerHTML = `<em>AT</em> ${lastSS.Ta} °C outside · ${lastSS.cfm} CFM<br><em>UA</em> ${fmt(lastSS.UA,0)} W/K (manual U×A)`;
+    document.getElementById('oTag1').textContent='Manual'; document.getElementById('oTag1').className='tag man';
+    setDot('oDot1','good'); setDot('ld1','good');
+    document.getElementById('uaTag').textContent='UA '+fmt(lastSS.UA,0)+' W/K';
+  }
+  if (lastSeason){
+    document.getElementById('oS').innerHTML = fmt(lastSeason.inBand,0)+'<small>%</small>';
+    document.getElementById('oSsub').innerHTML = `<em>MEAN</em> ${fmt(lastSeason.mean,1)} °C · <em>MIN</em> ${fmt(lastSeason.min,1)} °C<br>${lastSeason.label}`;
+    document.getElementById('oTagS').textContent = lastSeason.src; document.getElementById('oTagS').className='tag '+(lastSeason.src==='Experiment'?'exp':'man');
+    setDot('oDotS','good'); setDot('ld4','good');
+  }
+}
+
+/* ---- STEP 1: Direct UA steady-state (cooling) ---- */
+function runDirectUA(){
+  const U=+document.getElementById("Uinput").value;
+  const A=+document.getElementById("Ainput").value;
+  const Tinternal=+document.getElementById("uaTinternal").value;
+  const TextBase=+document.getElementById("uaTextBase").value;
+  const baseCFM=+document.getElementById("uaCFMbase").value;
+  if(!(U>0)||!(A>0)){ document.getElementById("uaTable").innerHTML="<div class='note2' style='padding:14px'>Enter positive U and A.</div>"; return; }
+  if(!(baseCFM>0)){ document.getElementById("uaTable").innerHTML="<div class='note2' style='padding:14px'>Enter a positive CFM.</div>"; return; }
+
+  const UA=U*A;
+  // External temps ±7°C around base, integer steps
+  const extTemps=[]; for(let t=Math.round(TextBase-7); t<=Math.round(TextBase+7); t++) extTemps.push(t);
+  // CFM columns: base × [1,1.5,2,2.5,3]
+  const cfmCols=[1,1.5,2,2.5,3].map(m=>Math.round(baseCFM*m));
+
+  // Precompute all Tss to get global min/max for color scale
+  const grid=[];
+  let globalMin=Infinity, globalMax=-Infinity;
+  extTemps.forEach(Ta=>{
+    const row=[];
+    cfmCols.forEach(cfm=>{
+      const q=cfm*CFM_TO_M3S, mdot=q*rho, mcp=mdot*cp;
+      const Tss=(mcp*Ta + UA*Tinternal)/(mcp + UA);
+      row.push(Tss);
+      if (Tss<globalMin) globalMin=Tss;
+      if (Tss>globalMax) globalMax=Tss;
+    });
+    grid.push({Ta, row});
+  });
+
+  // Build table
+  let html="<table class='ua-grid'><tr><th>T<sub>ext</sub> °C</th>";
+  cfmCols.forEach(c=>html+=`<th>${c} CFM</th>`); html+="</tr>";
+
+  grid.forEach(({Ta,row})=>{
+    html+=`<tr><th>${Ta}</th>`;
+    row.forEach(Tss=>{
+      const f=(Tss - globalMin)/Math.max(1e-9,(globalMax - globalMin)); // 0..1
+      const hue=220*(1-f); // 0=red (warmest), 220=blue (coolest)
+      const bg=`hsl(${hue},62%,${30+8*Math.abs(f-0.5)}%)`;
+      html+=`<td style="background:${bg}; color:#eef1f4;">${Tss.toFixed(1)}</td>`;
+    });
+    html+="</tr>";
+  });
+  html+="</table>";
+  document.getElementById("uaTable").innerHTML=html;
+
+  // overview: baseline row/column
+  const q0=baseCFM*CFM_TO_M3S, mcp0=q0*rho*cp;
+  lastSS={Ta:TextBase, cfm:baseCFM, UA, Tss:(mcp0*TextBase + UA*Tinternal)/(mcp0+UA)};
+  refreshOverview();
+}
+
+/* ---- STEP 2: Wide data parsing & UI ---- */
+function sniffDelimiter(line){
+  if (line.includes(",")) return ",";
+  if (line.includes("\t")) return "\t";
+  return /\s+/;
+}
+
+function parseWideAndSetup(){
+  const raw=document.getElementById("wideData").value.trim();
+  if (!raw){ alert("No data"); return; }
+  const lines=raw.split(/\r?\n/).filter(s=>s.trim().length>0);
+  if (lines.length<2){ alert("Need header + rows"); return; }
+
+  const delim=sniffDelimiter(lines[0]);
+  colNames=lines[0].split(delim).map(s=>s.trim());
+  const ncol=colNames.length;
+  if (ncol<2){ alert("Need datetime + at least one temperature column"); return; }
+
+  const timeColIdx=0;
+  let rows=[];
+  for (let i=1;i<lines.length;i++){
+    const parts=lines[i].split(delim);
+    if (parts.length<ncol) continue;
+    const t=Date.parse(parts[timeColIdx]);
+    if (!Number.isFinite(t)) continue;
+    const temps=[];
+    for (let j=1;j<ncol;j++) temps.push(toNumOrNull(parts[j]));
+    rows.push({t,temps});
+  }
+  if (rows.length<3){ alert("Not enough valid rows"); return; }
+  rows.sort((a,b)=>a.t-b.t);
+
+  timesMs=rows.map(r=>r.t);
+  const m=rows.length,k=ncol-1;
+  columns=Array.from({length:k},()=>Array(m).fill(null));
+  for (let i=0;i<m;i++) for (let j=0;j<k;j++) columns[j][i]=rows[i].temps[j];
+  const t0=timesMs[0];
+  mins=timesMs.map(t=>(t-t0)/60000);
+
+  // defaults
+  extColIndex=0; internalColIndices=[]; for (let j=1;j<columns.length;j++) internalColIndices.push(j);
+
+  renderColumnSelectors();
+  document.getElementById("columnSelectors").classList.remove("hidden");
+  applyColumnSelection();
+}
+
+function renderColumnSelectors(){
+  const wrap=document.getElementById("columnSelectors");
+  const tempNames=colNames.slice(1);
+  let html=`<h3>Choose columns</h3>
+  <div class="row">
+    <div><div class="fl" style="margin-bottom:6px">Outside column</div>`;
+  tempNames.forEach((nm,j)=>{
+    const checked=(j===extColIndex)?"checked":"";
+    html+=`<label style="display:block;margin:4px 0;"><input type="radio" name="extCol" value="${j}" ${checked}> ${nm}</label>`;
+  });
+  html+=`</div><div><div class="fl" style="margin-bottom:6px">Internal columns (averaged)</div>`;
+  tempNames.forEach((nm,j)=>{
+    const checked=(j!==extColIndex)?"checked":"";
+    html+=`<label style="display:block;margin:4px 0;"><input type="checkbox" name="intCol" value="${j}" ${checked}> ${nm}</label>`;
+  });
+  html+=`</div></div><button class="btn" onclick="applyColumnSelection()">Apply &amp; plot</button>`;
+  wrap.innerHTML=html;
+}
+
+function applyColumnSelection(){
+  const extSel=[...document.querySelectorAll('input[name="extCol"]')].find(r=>r.checked);
+  extColIndex=extSel?parseInt(extSel.value):0;
+
+  internalColIndices=[...document.querySelectorAll('input[name="intCol"]:checked')]
+    .map(cb=>parseInt(cb.value)).filter(i=>i!==extColIndex);
+
+  if (internalColIndices.length===0){ alert("Select at least one internal logger column."); return; }
+
+  const n=mins.length;
+  extSeries=Array.from({length:n},(_,i)=>columns[extColIndex][i]??null);
+  const internalCols=internalColIndices.map(idx=>columns[idx]);
+  avgSeries=Array.from({length:n},(_,i)=>{
+    const vals=internalCols.map(col=>col[i]).filter(v=>Number.isFinite(v));
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+  });
+
+  drawStep2Plot(internalCols);
+  resetSelections();
+}
+
+/* ---- Step 2 plotting & selection ---- */
+const LOGGER_COLORS=['#3987e5','#199e70','#c98500','#d55181','#9085e9','#d95926'];
+function drawStep2Plot(internalCols){
+  const traces=[];
+  traces.push({ x:mins, y:extSeries, mode:"lines", name:"External", yaxis:"y2", line:{color:"#636d78"} });
+  internalCols.forEach((col,k)=>{
+    const nm=colNames[1+internalColIndices[k]];
+    traces.push({ x:mins, y:col, mode:"lines", name:nm, line:{dash:"dot",width:1,color:LOGGER_COLORS[k%LOGGER_COLORS.length]} });
+  });
+  traces.push({
+    x: mins, y: avgSeries, mode: "lines+markers", name: "Internal Avg",
+    line: { color: "#9fd8ff", width: 3 }, marker: { size: 5, opacity: 0.7, color:"#9fd8ff" },
+    selected: { marker: { size: 8, opacity: 1 } },
+    unselected: { marker: { opacity: 0.25 } }
+  });
+
+  const layout=darkLayout({
+    title:"Temperature vs time",
+    dragmode:"select",
+    selectdirection:"h",
+    height:440,
+    xaxis:{ title:"Time (minutes)" },
+    yaxis:{ title:"Internal temp (°C)" },
+    yaxis2:{ title:"External temp (°C)", overlaying:"y", side:"right", showgrid:false }
+  });
+
+  Plotly.newPlot("graph", traces, layout, Object.assign({}, PCFG, {
+    displayModeBar:true,
+    modeBarButtonsToAdd:['select2d','lasso2d']
+  })).then(gd=>{
+    gdRef=gd;
+    gd.on('plotly_selected', ev=>{
+      if (!ev?.points?.length) return;
+      const curveIndex=gd.data.findIndex(tr=>tr.name==="Internal Avg");
+      if (curveIndex<0) return;
+      const pts=ev.points.filter(p=>p.curveNumber===curveIndex);
+      if (pts.length<3) return;
+
+      const idxs=pts.map(p=>p.pointIndex).sort((a,b)=>a-b);
+      if (!firstSelection){
+        firstSelection=computeFirstByIndex(idxs);
+        drawFitLineByIndex(gd,idxs,"Initial","#d95926");
+      } else if (!secondSelection){
+        secondSelection=computeSecondByIndex(idxs, firstSelection.Croom);
+        drawFitLineByIndex(gd,idxs,"Return","#199e70");
       }
-    }
-    function fmt(num,d=2){ return (isFinite(num)? Number(num).toFixed(d) : '—'); }
-    function mphToMps(mph){ return mph*0.44704; }
-    function inchesToMeters(inches){ return inches*0.0254; }
-    function todayISO(){ return new Date().toISOString().slice(0,10); }
-    function toNumOrNull(x){ const v=parseFloat(x); return Number.isFinite(v)?v:null; }
+      updateResults();
+      const ready=!!(firstSelection && secondSelection);
+      document.getElementById("tab3").disabled=!ready;
+      document.getElementById("nextToStep3").disabled=!ready;
+    });
+  });
+}
 
-    /* ---- STEP 1: Direct UA steady-state (cooling) ---- */
-    function runDirectUA(){
-      const U=+document.getElementById("Uinput").value;
-      const A=+document.getElementById("Ainput").value;
-      const Tinternal=+document.getElementById("uaTinternal").value;
-      const TextBase=+document.getElementById("uaTextBase").value;
-      const baseCFM=+document.getElementById("uaCFMbase").value;
-      if(!(U>0)||!(A>0)){ document.getElementById("uaTable").innerHTML="<div class='muted'>Enter positive U and A.</div>"; return; }
-      if(!(baseCFM>0)){ document.getElementById("uaTable").innerHTML="<div class='muted'>Enter a positive CFM.</div>"; return; }
+function linReg(xs,ys){
+  const n=xs.length, mx=xs.reduce((a,b)=>a+b,0)/n, my=ys.reduce((a,b)=>a+b,0)/n;
+  let num=0, den=0; for(let i=0;i<n;i++){ const dx=xs[i]-mx; num+=dx*(ys[i]-my); den+=dx*dx; }
+  return {slope:num/den, intercept: my-(num/den)*mx};
+}
+function drawFitLineByIndex(gd, idxs, name, color){
+  const xs=idxs.map(i=>mins[i]); const ys=idxs.map(i=>avgSeries[i]);
+  const {slope,intercept}=linReg(xs,ys);
+  const xMin=xs[0], xMax=xs[xs.length-1];
+  const lineX=[xMin,xMax], lineY=lineX.map(x=>slope*x+intercept);
+  Plotly.addTraces(gd,{x:lineX,y:lineY,mode:"lines",name,line:{dash:"dash",color,width:3}});
+}
 
-      const UA=U*A;
-      // External temps ±7°C around base, integer steps
-      const extTemps=[]; for(let t=Math.round(TextBase-7); t<=Math.round(TextBase+7); t++) extTemps.push(t);
-      // CFM columns: base × [1,1.5,2,2.5,3]
-      const cfmCols=[1,1.5,2,2.5,3].map(m=>Math.round(baseCFM*m));
-
-      // Precompute all Tss to get global min/max for color scale
-      const grid=[];
-      let globalMin=Infinity, globalMax=-Infinity;
-      extTemps.forEach(Ta=>{
-        const row=[];
-        cfmCols.forEach(cfm=>{
-          const q=cfm*CFM_TO_M3S, mdot=q*rho, mcp=mdot*cp;
-          const Tss=(mcp*Ta + UA*Tinternal)/(mcp + UA);
-          row.push(Tss);
-          if (Tss<globalMin) globalMin=Tss;
-          if (Tss>globalMax) globalMax=Tss;
-        });
-        grid.push({Ta, row});
-      });
-
-      // Build table
-      let html="<table class='ua-grid'><tr><th>External T (°C)</th>";
-      cfmCols.forEach(c=>html+=`<th>${c} CFM</th>`); html+="</tr>";
-
-      grid.forEach(({Ta,row})=>{
-        html+=`<tr><th>${Ta}</th>`;
-        row.forEach(Tss=>{
-          const f=(Tss - globalMin)/Math.max(1e-9,(globalMax - globalMin)); // 0..1
-          const hue=220*(1-f); // 0=red (warmest), 220=blue (coolest)
-          const bg=`hsl(${hue},85%,50%)`;
-          const textColor = (f>0.6) ? "#fff" : "#000";
-          html+=`<td style="background:${bg}; color:${textColor};">${Tss.toFixed(1)}</td>`;
-        });
-        html+="</tr>";
-      });
-      html+="</table>";
-      document.getElementById("uaTable").innerHTML=html;
-    }
-
-    /* ---- STEP 2: Wide data parsing & UI ---- */
-    function sniffDelimiter(line){
-      if (line.includes(",")) return ",";
-      if (line.includes("\t")) return "\t";
-      return /\s+/;
-    }
-
-    function parseWideAndSetup(){
-      const raw=document.getElementById("wideData").value.trim();
-      if (!raw){ alert("No data"); return; }
-      const lines=raw.split(/\r?\n/).filter(s=>s.trim().length>0);
-      if (lines.length<2){ alert("Need header + rows"); return; }
-
-      const delim=sniffDelimiter(lines[0]);
-      colNames=lines[0].split(delim).map(s=>s.trim());
-      const ncol=colNames.length;
-      if (ncol<2){ alert("Need datetime + at least one temperature column"); return; }
-
-      const timeColIdx=0;
-      let rows=[];
-      for (let i=1;i<lines.length;i++){
-        const parts=lines[i].split(delim);
-        if (parts.length<ncol) continue;
-        const t=Date.parse(parts[timeColIdx]);
-        if (!Number.isFinite(t)) continue;
-        const temps=[];
-        for (let j=1;j<ncol;j++) temps.push(toNumOrNull(parts[j]));
-        rows.push({t,temps});
-      }
-      if (rows.length<3){ alert("Not enough valid rows"); return; }
-      rows.sort((a,b)=>a.t-b.t);
-
-      timesMs=rows.map(r=>r.t);
-      const m=rows.length,k=ncol-1;
-      columns=Array.from({length:k},()=>Array(m).fill(null));
-      for (let i=0;i<m;i++) for (let j=0;j<k;j++) columns[j][i]=rows[i].temps[j];
-      const t0=timesMs[0];
-      mins=timesMs.map(t=>(t-t0)/60000);
-
-      // defaults
-      extColIndex=0; internalColIndices=[]; for (let j=1;j<columns.length;j++) internalColIndices.push(j);
-
-      renderColumnSelectors();
-      document.getElementById("columnSelectors").classList.remove("hidden");
-      applyColumnSelection();
-    }
-
-    function renderColumnSelectors(){
-      const wrap=document.getElementById("columnSelectors");
-      const tempNames=colNames.slice(1);
-      let html=`<h3>Choose columns</h3>
-      <div class="row">
-        <div class="col"><b>External column:</b><br>`;
-      tempNames.forEach((nm,j)=>{
-        const checked=(j===extColIndex)?"checked":"";
-        html+=`<label style="display:block;margin:4px 0;"><input type="radio" name="extCol" value="${j}" ${checked}> ${nm}</label>`;
-      });
-      html+=`</div><div class="col"><b>Internal columns (averaged):</b><br>`;
-      tempNames.forEach((nm,j)=>{
-        const checked=(j!==extColIndex)?"checked":"";
-        html+=`<label style="display:block;margin:4px 0;"><input type="checkbox" name="intCol" value="${j}" ${checked}> ${nm}</label>`;
-      });
-      html+=`</div></div><button class="btn" onclick="applyColumnSelection()">Apply & Plot</button>`;
-      wrap.innerHTML=html;
-    }
-
-    function applyColumnSelection(){
-      const extSel=[...document.querySelectorAll('input[name="extCol"]')].find(r=>r.checked);
-      extColIndex=extSel?parseInt(extSel.value):0;
-
-      internalColIndices=[...document.querySelectorAll('input[name="intCol"]:checked')]
-        .map(cb=>parseInt(cb.value)).filter(i=>i!==extColIndex);
-
-      if (internalColIndices.length===0){ alert("Select at least one internal logger column."); return; }
-
-      const n=mins.length;
-      extSeries=Array.from({length:n},(_,i)=>columns[extColIndex][i]??null);
-      const internalCols=internalColIndices.map(idx=>columns[idx]);
-      avgSeries=Array.from({length:n},(_,i)=>{
-        const vals=internalCols.map(col=>col[i]).filter(v=>Number.isFinite(v));
-        return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
-      });
-
-      drawStep2Plot(internalCols);
-      resetSelections();
-    }
-
-    /* ---- Step 2 plotting & selection ---- */
-    function drawStep2Plot(internalCols){
-      const traces=[];
-      traces.push({ x:mins, y:extSeries, mode:"lines", name:"External", yaxis:"y2", line:{color:"gray"} });
-      internalCols.forEach((col,k)=>{
-        const nm=colNames[1+internalColIndices[k]];
-        traces.push({ x:mins, y:col, mode:"lines", name:nm, line:{dash:"dot"} });
-      });
-      traces.push({
-        x: mins, y: avgSeries, mode: "lines+markers", name: "Internal Avg",
-        line: { color: "blue", width: 3 }, marker: { size: 6, opacity: 0.7 },
-        selected: { marker: { size: 8, opacity: 1 }, line: { width: 4 } },
-        unselected: { marker: { opacity: 0.25 } }
-      });
-
-      const layout={
-        title:"Temperature vs Time (wide input)",
-        dragmode:"select",
-        selectdirection:"h",
-        xaxis:{ title:"Time (minutes)" },
-        yaxis:{ title:"Internal Temp (°C)" },
-        yaxis2:{ title:"External Temp (°C)", overlaying:"y", side:"right", showgrid:false }
-      };
-
-      Plotly.newPlot("graph", traces, layout, {
-        responsive:true,
-        displayModeBar:true,
-        modeBarButtonsToAdd:['select2d','lasso2d']
-      }).then(gd=>{
-        gdRef=gd;
-        gd.on('plotly_selected', ev=>{
-          if (!ev?.points?.length) return;
-          const curveIndex=gd.data.findIndex(tr=>tr.name==="Internal Avg");
-          if (curveIndex<0) return;
-          const pts=ev.points.filter(p=>p.curveNumber===curveIndex);
-          if (pts.length<3) return;
-
-          const idxs=pts.map(p=>p.pointIndex).sort((a,b)=>a-b);
-          if (!firstSelection){
-            firstSelection=computeFirstByIndex(idxs);
-            drawFitLineByIndex(gd,idxs,"Initial","red");
-          } else if (!secondSelection){
-            secondSelection=computeSecondByIndex(idxs, firstSelection.Croom);
-            drawFitLineByIndex(gd,idxs,"Return","blue");
-          }
-          updateResults();
-          const ready=!!(firstSelection && secondSelection);
-          document.getElementById("tab3").disabled=!ready;
-          document.getElementById("nextToStep3").disabled=!ready;
-        });
-      });
-    }
-
-    function linReg(xs,ys){
-      const n=xs.length, mx=xs.reduce((a,b)=>a+b,0)/n, my=ys.reduce((a,b)=>a+b,0)/n;
-      let num=0, den=0; for(let i=0;i<n;i++){ const dx=xs[i]-mx; num+=dx*(ys[i]-my); den+=dx*dx; }
-      return {slope:num/den, intercept: my-(num/den)*mx};
-    }
-    function drawFitLineByIndex(gd, idxs, name, color){
-      const xs=idxs.map(i=>mins[i]); const ys=idxs.map(i=>avgSeries[i]);
-      const {slope,intercept}=linReg(xs,ys);
-      const xMin=xs[0], xMax=xs[xs.length-1];
-      const lineX=[xMin,xMax], lineY=lineX.map(x=>slope*x+intercept);
-      Plotly.addTraces(gd,{x:lineX,y:lineY,mode:"lines",name,line:{dash:"dash",color}});
-    }
-
-    function flowFromInputs(){
-      const cfm=+document.getElementById("cfm").value;
-      if (cfm>0){ const q=cfm*CFM_TO_M3S; return { q_m3s:q, mdot:q*rho }; }
-      const mph=+document.getElementById("airspeed").value;
-      const din=+document.getElementById("ductDiameter").value;
-      const v=mphToMps(mph), d=inchesToMeters(din);
-      const area=Math.PI*(d/2)**2, q=v*area;
-      return { q_m3s:q, mdot:q*rho };
-    }
+function flowFromInputs(){
+  const cfm=+document.getElementById("cfm").value;
+  if (cfm>0){ const q=cfm*CFM_TO_M3S; return { q_m3s:q, mdot:q*rho }; }
+  const mph=+document.getElementById("airspeed").value;
+  const din=+document.getElementById("ductDiameter").value;
+  const v=mphToMps(mph), d=inchesToMeters(din);
+  const area=Math.PI*(d/2)**2, q=v*area;
+  return { q_m3s:q, mdot:q*rho };
+}
 
 function computeFirstByIndex(idxs){
   // idxs is sorted ascending
@@ -437,7 +727,6 @@ function computeFirstByIndex(idxs){
 
   return { slope: dTdt_s, heatRate: heatRate_W, Croom: Croom_kJperK };
 }
-
 
 function computeSecondByIndex(idxs, Croom_kJperK){
   if (!Number.isFinite(Croom_kJperK) || !(Croom_kJperK > 0)) return { slope: NaN, k: NaN, UA: NaN };
@@ -473,153 +762,168 @@ function computeSecondByIndex(idxs, Croom_kJperK){
   return { slope: dTdt_s, k: k_per_s, UA: UA_WperK };
 }
 
+function updateResults(){
+  const box=document.getElementById("resultsBody");
+  if (!firstSelection){
+    box.innerHTML=`<div class="col"><div class="muted">Awaiting selections…</div></div>`;
+    refreshOverview();
+    return;
+  }
+  let cTxt = Number.isFinite(firstSelection.Croom) ? `${fmt(firstSelection.Croom,1)} <small style="font-size:.45em;color:var(--fg-3)">kJ/K</small>`
+            : `<span class="muted">— (pick a window with nonzero slope &amp; ΔT)</span>`;
+  let html=`<div class="col"><h3>Initial · C<sub>room</sub></h3><div class="stat"><b>C<sub>room</sub>:</b> ${cTxt}</div></div>`;
+  if (secondSelection){
+    let uaTxt = Number.isFinite(secondSelection.UA) ? `${fmt(secondSelection.UA,1)} <small style="font-size:.45em;color:var(--fg-3)">W/K</small>`
+              : `<span class="muted">— (pick a window with measurable return)</span>`;
+    html+=`<div class="col"><h3>Return · UA</h3><div class="stat"><b>UA:</b> ${uaTxt}</div></div>`;
+  } else {
+    html+=`<div class="col"><h3>Return · UA</h3><div class="muted">Now select the Return window.</div></div>`;
+  }
+  box.innerHTML=html;
+  refreshOverview();
+}
 
+function resetSelections(){
+  firstSelection=null; secondSelection=null;
+  document.getElementById("resultsBody").innerHTML=`<div class="col"><div class="muted">Awaiting selections…</div></div>`;
+  document.getElementById("tab3").disabled=true;
+  document.getElementById("nextToStep3").disabled=true;
+  if (gdRef){
+    // delete "Initial"/"Return" fit lines (delete from end to start to avoid index shift)
+    const toDelete=[];
+    gdRef.data.forEach((tr,i)=>{ if (tr.name==="Initial"||tr.name==="Return") toDelete.push(i); });
+    toDelete.sort((a,b)=>b-a).forEach(i=>Plotly.deleteTraces(gdRef,i));
+  }
+  refreshOverview();
+}
 
-    function updateResults(){
-      const box=document.getElementById("resultsBody");
-      if (!firstSelection){
-        box.innerHTML=`<div class="col"><div class="muted">Awaiting selections…</div></div>`;
-        return;
-      }
-      let cTxt = Number.isFinite(firstSelection.Croom) ? `${fmt(firstSelection.Croom,1)} kJ/K`
-                : `<span class="muted">— (pick a window with nonzero slope & ΔT)</span>`;
-      let html=`<div class="col"><h3>Initial</h3><div class="stat"><b>C<sub>room</sub>:</b> ${cTxt}</div></div>`;
-      if (secondSelection){
-        let uaTxt = Number.isFinite(secondSelection.UA) ? `${fmt(secondSelection.UA,1)} W/K`
-                  : `<span class="muted">— (pick a window with measurable return)</span>`;
-        html+=`<div class="col"><h3>Return</h3><div class="stat"><b>UA:</b> ${uaTxt}</div></div>`;
-      }
-      box.innerHTML=html;
-    }
+/* ---- STEP 3 ---- */
+function runLocalSimulation(){
+  if (!firstSelection || !secondSelection){ alert("Complete Step 2 (both tangent windows) first."); return; }
+  const T0=+document.getElementById("simT0").value;
+  const Ta=+document.getElementById("simTa").value;
+  const Tr=+document.getElementById("simTr").value;
+  const hrs=+document.getElementById("simHours").value;
+  const cfm=+document.getElementById("simCFM").value;
 
-    function resetSelections(){
-      firstSelection=null; secondSelection=null;
-      document.getElementById("resultsBody").innerHTML=`<div class="col"><div class="muted">Awaiting selections…</div></div>`;
-      document.getElementById("tab3").disabled=true;
-      document.getElementById("nextToStep3").disabled=true;
-      if (gdRef){
-        // delete "Initial"/"Return" fit lines (delete from end to start to avoid index shift)
-        const toDelete=[];
-        gdRef.data.forEach((tr,i)=>{ if (tr.name==="Initial"||tr.name==="Return") toDelete.push(i); });
-        toDelete.sort((a,b)=>b-a).forEach(i=>Plotly.deleteTraces(gdRef,i));
-      }
-    }
+  const UA=Math.abs(secondSelection.UA);
+  const C_JK=Math.abs(firstSelection.Croom)*1000;
+  const q=cfm*CFM_TO_M3S, mdot=q*rho, mcp=mdot*cp;
 
-    /* ---- STEP 3 ---- */
-    function runLocalSimulation(){
-      if (!firstSelection || !secondSelection){ alert("Complete Step 2 (both tangent windows) first."); return; }
-      const T0=+document.getElementById("simT0").value;
-      const Ta=+document.getElementById("simTa").value;
-      const Tr=+document.getElementById("simTr").value;
-      const hrs=+document.getElementById("simHours").value;
-      const cfm=+document.getElementById("simCFM").value;
+  const A=(mcp+UA)/C_JK;
+  const Tss=(mcp*Ta + UA*Tr)/(mcp+UA);
 
-      const UA=Math.abs(secondSelection.UA);
-      const C_JK=Math.abs(firstSelection.Croom)*1000;
-      const q=cfm*CFM_TO_M3S, mdot=q*rho, mcp=mdot*cp;
+  const sec=hrs*3600, n=Math.max(60, Math.min(2000, Math.round(sec/60))), dt=sec/n;
+  const xs=[], ys=[];
+  for (let i=0;i<=n;i++){ const t=i*dt; xs.push(t/3600); ys.push(Tss + (T0 - Tss)*Math.exp(-A*t)); }
+  Plotly.newPlot("simPlot", [{x:xs,y:ys,mode:"lines",name:"Internal (sim)",line:{color:'#9fd8ff',width:2.5}}],
+    darkLayout({ title:"Local simulation", height:420, xaxis:{title:"Time (hours)"}, yaxis:{title:"Temperature (°C)"} }), PCFG);
+  document.getElementById("simStats").innerHTML = `T<sub>ss</sub> = ${fmt(Tss,2)} °C · τ = ${fmt(1/Math.max(A,1e-12)/3600,2)} h`;
+  setDot('ld3','good');
+}
 
-      const A=(mcp+UA)/C_JK;
+/* ---- STEP 4: Weather sim (manual or Step 2) ---- */
+async function geocode(nameOrLatLon){
+  if (nameOrLatLon.includes(",")){
+    const [latStr,lonStr]=nameOrLatLon.split(",");
+    const lat=parseFloat(latStr), lon=parseFloat(lonStr);
+    if (Number.isFinite(lat)&&Number.isFinite(lon)) return {lat,lon,label:`${lat}, ${lon}`};
+  }
+  const u=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(nameOrLatLon)}&count=1&language=en&format=json`;
+  const r=await fetch(u); if(!r.ok) throw new Error("Geocoding request failed");
+  const j=await r.json(); if(!j.results?.length) throw new Error("Location not found");
+  const g=j.results[0]; return { lat:g.latitude, lon:g.longitude, label:`${g.name}${g.admin1?(", "+g.admin1):""}` };
+}
+async function fetchHourlyTemps(lat,lon,a,b,tz="auto"){
+  async function arch(x,y){ const u=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${x}&end_date=${y}&hourly=temperature_2m&timezone=${encodeURIComponent(tz)}`;
+    const r=await fetch(u); if(!r.ok) throw new Error("Archive API error"); const j=await r.json(); if(!j.hourly?.time) throw new Error("No hourly data (archive)");
+    return {time:j.hourly.time.map(t=>new Date(t)), temp:j.hourly.temperature_2m}; }
+  async function fore(x,y){ const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&start_date=${x}&end_date=${y}&hourly=temperature_2m&timezone=${encodeURIComponent(tz)}`;
+    const r=await fetch(u); if(!r.ok) throw new Error("Forecast API error"); const j=await r.json(); if(!j.hourly?.time) throw new Error("No hourly data (forecast)");
+    return {time:j.hourly.time.map(t=>new Date(t)), temp:j.hourly.temperature_2m}; }
+  const today=todayISO();
+  if (b<today) return arch(a,b);
+  if (a>=today) return fore(a,b);
+  const part1=await arch(a,today), part2=await fore(today,b);
+  return { time: part1.time.concat(part2.time), temp: part1.temp.concat(part2.temp) };
+}
+
+function getUA_ForStep4(){
+  const src=document.querySelector('input[name="uaSrc"]:checked')?.value;
+  if (src==="step2" && secondSelection?.UA) return Math.abs(secondSelection.UA);
+  if (src==="manualUA"){ const v=+document.getElementById("uaManual").value; if (!(v>0)) throw new Error("Enter positive UA (W/K)"); return v; }
+  if (src==="manualUandA"){ const u=+document.getElementById("uManual").value, a=+document.getElementById("aManual").value; if(!(u>0)||!(a>0)) throw new Error("Enter positive U and A"); return u*a; }
+  throw new Error("UA source not set/available.");
+}
+function getC_ForStep4(){
+  const src=document.querySelector('input[name="cSrc"]:checked')?.value;
+  if (src==="step2" && firstSelection?.Croom) return Math.abs(firstSelection.Croom)*1000;
+  if (src==="manual"){ const kJ=+document.getElementById("cManual").value; if (!(kJ>0)) throw new Error("Enter positive Croom (kJ/K)"); return kJ*1000; }
+  throw new Error("Croom source not set/available.");
+}
+
+async function runSeasonal(){
+  const status=document.getElementById("seasonStatus");
+  status.textContent="Validating inputs…";
+  let UA, C_JK;
+  try{ UA=getUA_ForStep4(); C_JK=getC_ForStep4(); }
+  catch(e){ status.textContent="Error: "+(e.message||e); return; }
+  const fromExp = document.querySelector('input[name="uaSrc"]:checked')?.value==="step2" && document.querySelector('input[name="cSrc"]:checked')?.value==="step2";
+
+  const loc=document.getElementById("locInput").value.trim();
+  const startISO=document.getElementById("startDate").value;
+  const endISO=document.getElementById("endDate").value;
+  const T0=+document.getElementById("seasonT0").value;
+  const Tr=+document.getElementById("seasonTr").value;
+  const cfm=+document.getElementById("seasonCFM").value;
+
+  const q=cfm*CFM_TO_M3S, mdot=q*rho, mcp=mdot*cp;
+
+  status.textContent="Geocoding…";
+  try{
+    const g=await geocode(loc);
+    status.textContent=`Fetching hourly temps for ${g.label}…`;
+    const data=await fetchHourlyTemps(g.lat,g.lon,startISO,endISO,"auto");
+    status.textContent="Running simulation…";
+
+    let Tint=T0, TintSeries=[];
+    for (let i=0;i<data.temp.length;i++){
+      const Ta=data.temp[i];
+      const alpha=(mcp+UA)/C_JK;
       const Tss=(mcp*Ta + UA*Tr)/(mcp+UA);
-
-      const sec=hrs*3600, n=Math.max(60, Math.min(2000, Math.round(sec/60))), dt=sec/n;
-      const xs=[], ys=[];
-      for (let i=0;i<=n;i++){ const t=i*dt; xs.push(t/3600); ys.push(Tss + (T0 - Tss)*Math.exp(-A*t)); }
-      Plotly.newPlot("simPlot", [{x:xs,y:ys,mode:"lines",name:"Internal (sim)"}],
-        { title:"Local Simulation", xaxis:{title:"Time (hours)"}, yaxis:{title:"Temperature (°C)"} });
-      document.getElementById("simStats").innerHTML = `T<sub>ss</sub> = ${fmt(Tss,2)} °C · τ = ${fmt(1/Math.max(A,1e-12)/3600,2)} h`;
+      Tint=Tss + (Tint - Tss)*Math.exp(-alpha*3600);
+      TintSeries.push(Tint);
     }
 
-    /* ---- STEP 4: Weather sim (manual or Step 2) ---- */
-    async function geocode(nameOrLatLon){
-      if (nameOrLatLon.includes(",")){
-        const [latStr,lonStr]=nameOrLatLon.split(",");
-        const lat=parseFloat(latStr), lon=parseFloat(lonStr);
-        if (Number.isFinite(lat)&&Number.isFinite(lon)) return {lat,lon,label:`${lat}, ${lon}`};
-      }
-      const u=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(nameOrLatLon)}&count=1&language=en&format=json`;
-      const r=await fetch(u); if(!r.ok) throw new Error("Geocoding request failed");
-      const j=await r.json(); if(!j.results?.length) throw new Error("Location not found");
-      const g=j.results[0]; return { lat:g.latitude, lon:g.longitude, label:`${g.name}${g.admin1?(", "+g.admin1):""}` };
+    Plotly.newPlot("seasonPlot",[
+      {x:data.time,y:data.temp,mode:"lines",name:"External T",line:{color:"#636d78",width:1}},
+      {x:data.time,y:TintSeries,mode:"lines",name:"Internal T (sim)",line:{color:"#9fd8ff",width:2}}
+    ],darkLayout({ title:"Seasonal simulation (hourly)", height:440, xaxis:{title:"Date"}, yaxis:{title:"Temperature (°C)"},
+      shapes:[{type:'rect',xref:'paper',x0:0,x1:1,y0:2,y1:6,fillcolor:'rgba(159,216,255,0.07)',line:{width:0},layer:'below'}] }), PCFG);
+
+    const minT=Math.min(...TintSeries), maxT=Math.max(...TintSeries);
+    const meanT=TintSeries.reduce((a,b)=>a+b,0)/TintSeries.length;
+    const inBand=TintSeries.filter(t=>t>=2 && t<=6).length/TintSeries.length*100;
+    document.getElementById("seasonStats").innerHTML=
+      `<div class="kpis">
+        <div class="kpi"><span class="lbl">Time in 2–6 °C</span><span class="big">${fmt(inBand,1)}<small>%</small></span></div>
+        <div class="kpi"><span class="lbl">Mean</span><span class="big">${fmt(meanT,1)}<small>°C</small></span></div>
+        <div class="kpi"><span class="lbl">Min</span><span class="big">${fmt(minT,1)}<small>°C</small></span></div>
+        <div class="kpi"><span class="lbl">Max</span><span class="big">${fmt(maxT,1)}<small>°C</small></span></div>
+        <div class="kpi"><span class="lbl">Inputs</span><span class="sub">UA ${fmt(UA,1)} W/K<br>C ${fmt(C_JK/1000,0)} kJ/K · ${cfm} CFM</span></div>
+      </div>`;
+    lastSeason={inBand, mean:meanT, min:minT, label:g.label, src: fromExp?'Experiment':'Manual'};
+    refreshOverview();
+    status.textContent="Done.";
+  }catch(err){
+    status.textContent=`Error: ${err.message||err}`;
+    if((err.message||"").toLowerCase().includes("hourly data")){
+      status.textContent+=" — Try adjusting date range (past=archive, future=forecast).";
     }
-    async function fetchHourlyTemps(lat,lon,a,b,tz="auto"){
-      async function arch(x,y){ const u=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${x}&end_date=${y}&hourly=temperature_2m&timezone=${encodeURIComponent(tz)}`;
-        const r=await fetch(u); if(!r.ok) throw new Error("Archive API error"); const j=await r.json(); if(!j.hourly?.time) throw new Error("No hourly data (archive)");
-        return {time:j.hourly.time.map(t=>new Date(t)), temp:j.hourly.temperature_2m}; }
-      async function fore(x,y){ const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&start_date=${x}&end_date=${y}&hourly=temperature_2m&timezone=${encodeURIComponent(tz)}`;
-        const r=await fetch(u); if(!r.ok) throw new Error("Forecast API error"); const j=await r.json(); if(!j.hourly?.time) throw new Error("No hourly data (forecast)");
-        return {time:j.hourly.time.map(t=>new Date(t)), temp:j.hourly.temperature_2m}; }
-      const today=todayISO();
-      if (b<today) return arch(a,b);
-      if (a>=today) return fore(a,b);
-      const part1=await arch(a,today), part2=await fore(today,b);
-      return { time: part1.time.concat(part2.time), temp: part1.temp.concat(part2.temp) };
-    }
+  }
+}
 
-    function getUA_ForStep4(){
-      const src=document.querySelector('input[name="uaSrc"]:checked')?.value;
-      if (src==="step2" && secondSelection?.UA) return Math.abs(secondSelection.UA);
-      if (src==="manualUA"){ const v=+document.getElementById("uaManual").value; if (!(v>0)) throw new Error("Enter positive UA (W/K)"); return v; }
-      if (src==="manualUandA"){ const u=+document.getElementById("uManual").value, a=+document.getElementById("aManual").value; if(!(u>0)&&!(a>0)) throw new Error("Enter positive U and A"); return u*a; }
-      throw new Error("UA source not set/available.");
-    }
-    function getC_ForStep4(){
-      const src=document.querySelector('input[name="cSrc"]:checked')?.value;
-      if (src==="step2" && firstSelection?.Croom) return Math.abs(firstSelection.Croom)*1000;
-      if (src==="manual"){ const kJ=+document.getElementById("cManual").value; if (!(kJ>0)) throw new Error("Enter positive Croom (kJ/K)"); return kJ*1000; }
-      throw new Error("Croom source not set/available.");
-    }
-
-    async function runSeasonal(){
-      const status=document.getElementById("seasonStatus");
-      status.textContent="Validating inputs…";
-      let UA, C_JK;
-      try{ UA=getUA_ForStep4(); C_JK=getC_ForStep4(); }
-      catch(e){ status.textContent="Error: "+(e.message||e); return; }
-
-      const loc=document.getElementById("locInput").value.trim();
-      const startISO=document.getElementById("startDate").value;
-      const endISO=document.getElementById("endDate").value;
-      const T0=+document.getElementById("seasonT0").value;
-      const Tr=+document.getElementById("seasonTr").value;
-      const cfm=+document.getElementById("seasonCFM").value;
-
-      const q=cfm*CFM_TO_M3S, mdot=q*rho, mcp=mdot*cp;
-
-      status.textContent="Geocoding…";
-      try{
-        const g=await geocode(loc);
-        status.textContent=`Fetching hourly temps for ${g.label}…`;
-        const data=await fetchHourlyTemps(g.lat,g.lon,startISO,endISO,"auto");
-        status.textContent="Running simulation…";
-
-        let Tint=T0, TintSeries=[];
-        for (let i=0;i<data.temp.length;i++){
-          const Ta=data.temp[i];
-          const alpha=(mcp+UA)/C_JK;
-          const Tss=(mcp*Ta + UA*Tr)/(mcp+UA);
-          Tint=Tss + (Tint - Tss)*Math.exp(-alpha*3600);
-          TintSeries.push(Tint);
-        }
-
-        Plotly.newPlot("seasonPlot",[
-          {x:data.time,y:data.temp,mode:"lines",name:"External T",line:{color:"gray"}},
-          {x:data.time,y:TintSeries,mode:"lines",name:"Internal T (sim)",line:{color:"blue"}}
-        ],{ title:"Seasonal Simulation (hourly)", xaxis:{title:"Date/Time"}, yaxis:{title:"Temperature (°C)"} });
-
-        const minT=Math.min(...TintSeries), maxT=Math.max(...TintSeries);
-        const meanT=TintSeries.reduce((a,b)=>a+b,0)/TintSeries.length;
-        const inBand=TintSeries.filter(t=>t>=2 && t<=6).length/TintSeries.length*100;
-        document.getElementById("seasonStats").innerHTML=
-          `<b>Internal T (sim):</b> min ${fmt(minT,1)}°C · max ${fmt(maxT,1)}°C · mean ${fmt(meanT,1)}°C<br>
-           <b>% time in 2–6 °C band:</b> ${fmt(inBand,1)}%`;
-        status.textContent="Done.";
-      }catch(err){
-        status.textContent=`Error: ${err.message||err}`;
-        if((err.message||"").toLowerCase().includes("hourly data")){
-          status.textContent+=" — Try adjusting date range (past=archive, future=forecast).";
-        }
-      }
-    }
-  </script>
+document.addEventListener('DOMContentLoaded', runDirectUA);
+</script>
 </body>
 </html>
