@@ -92,7 +92,7 @@ nav.tabs button .dot{width:6px;height:6px;margin-right:7px;vertical-align:1px}
 .fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 12px}
 .field{display:flex;flex-direction:column;gap:6px;min-width:0}
 .field label,.fl{font:500 10px/1.2 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--fg-3)}
-input[type=number],input[type=text],input[type=date],textarea{background:var(--bg);border:1px solid var(--line-2);color:var(--fg);padding:8px 10px;font:400 13px var(--f-mono);width:100%;border-radius:0;color-scheme:dark}
+input[type=number],input[type=text],input[type=date],select,textarea{background:var(--bg);border:1px solid var(--line-2);color:var(--fg);padding:8px 10px;font:400 13px var(--f-mono);width:100%;border-radius:0;color-scheme:dark}
 input:focus,textarea:focus{border-color:var(--ice);outline:none}
 textarea{min-height:150px;resize:vertical;font-size:12px}
 .btnrow{display:flex;gap:8px;flex-wrap:wrap}
@@ -226,6 +226,10 @@ footer.foot{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;di
       <div class="stepc"><div class="n">04</div><h3>Season</h3><p>Pull hourly weather for any location and date range and simulate the internal temperature across a winter.</p></div>
     </div>
   </div>
+  <div class="sec">
+    <div class="sech"><h2>Field calibrations</h2><span class="note">Values measured at real sites, newest first. Updated as better trials come in; only entries marked usable can feed step 4.</span></div>
+    <div id="calLog" class="tablewrap"><div class="note2" style="padding:14px">Loading calibration log…</div></div>
+  </div>
 </section>
 
 <!-- STEP 1 -->
@@ -258,6 +262,21 @@ footer.foot{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;di
   <div class="sec">
     <div class="sech"><h2>Step 2 · Fan experiment</h2><span class="note">Wide format: one datetime column, then one column per logger.</span></div>
     <div class="split">
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <div class="card" id="torporCard">
+        <h3>Load from TORPOR <span class="tag ice">Mead Adit</span></h3>
+        <p class="note2">Pulls the TORPOR cooling system's public sensor feed (ThingSpeak) for Mead Adit, Carp Lake Mine, into the box below. <b>S1</b> outside at the intake; <b>S2 / S3</b> high and low in the middle of the experimental chamber, by the mixing box (25 m); <b>S4 / S5</b> high and low at the rear of the experimental area (~40 m). A gradient between the middle and the rear is expected, so fit them separately as well as together. Shaded bands on the plot are times the inlet fan was running.</p>
+        <div class="fields">
+          <div class="field"><label for="tpStart">Start (Eastern)</label><input type="text" id="tpStart" placeholder="2026-11-16 08:00"></div>
+          <div class="field"><label for="tpEnd">End (Eastern)</label><input type="text" id="tpEnd" placeholder="2026-11-16 16:00"></div>
+          <div class="field"><label for="tpAvg">Time step</label>
+            <select id="tpAvg"><option value="0">1 min (raw)</option><option value="10" selected>10 min mean</option><option value="30">30 min mean</option><option value="60">60 min mean</option></select></div>
+          <div class="field"><label for="tpOffset">Sensor correction (°C)</label><input type="number" id="tpOffset" value="1.5" step="0.1"></div>
+        </div>
+        <p class="note2">The correction is subtracted from every sensor. 1.5 °C is the provisional common offset for the SEN0438 sensors (all five read warm; set by the TORPOR team, 14 Nov 2026). Enter 0 to use raw readings. Raw 1-minute data are limited to about 5 days per request.</p>
+        <div class="btnrow"><button class="btn" onclick="loadTorpor()">Load from TORPOR</button></div>
+        <div id="tpStatus" class="status"></div>
+      </div>
       <div class="card">
         <h3>Logger data</h3>
         <p class="note2">Paste CSV or tab-separated data, e.g. <code>datetime,External,Int1,Int2</code>.</p>
@@ -275,6 +294,7 @@ footer.foot{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;di
         </div>
         <p class="note2">If CFM is given it is used; otherwise flow = airspeed × duct area.</p>
       </div>
+      </div>
       <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
         <div class="plot" id="graph" data-empty="Parse data to plot"></div>
         <p class="note2"><b>How to fit:</b> use box select on the plot to drag across two windows of the <b>Internal Avg</b> line. The first window is <i>Initial</i> (fan on, room changing) and gives C<sub>room</sub>; the second is <i>Return</i> (fan off, room recovering) and gives UA.</p>
@@ -283,7 +303,9 @@ footer.foot{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;di
             <div class="col"><div class="muted">Select two windows on <b>Internal Avg</b>: first = <i>Initial</i>, second = <i>Return</i>.</div></div>
           </div>
         </div>
-        <div class="btnrow"><button id="nextToStep3" class="btn" onclick="showStep(3)" disabled>Next · Step 3 local simulation</button></div>
+        <div class="btnrow"><button id="nextToStep3" class="btn" onclick="showStep(3)" disabled>Next · Step 3 local simulation</button>
+          <button id="copyCalBtn" class="btn ghost" onclick="copyCalibrationEntry()" disabled>Copy as calibration entry</button></div>
+        <div id="copyCalOut" class="hidden"><p class="note2">Add this entry to the top of the <code>entries</code> list in <code>calibrations.json</code> and fill in the notes.</p><textarea id="copyCalText" readonly style="min-height:220px"></textarea></div>
       </div>
     </div>
   </div>
@@ -326,6 +348,7 @@ footer.foot{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;di
         <fieldset>
           <legend>UA source</legend>
           <label class="opt"><input type="radio" name="uaSrc" value="step2" id="uaSrc_step2" checked> From step 2 (if available)</label>
+          <label class="opt"><input type="radio" name="uaSrc" value="cal" id="uaSrc_cal" disabled> <span id="uaCalLbl">Field calibration (none usable yet)</span></label>
           <label class="opt"><input type="radio" name="uaSrc" value="manualUA"> Manual UA (W/K) <input type="number" id="uaManual" placeholder="e.g. 150" step="0.1"></label>
           <label class="opt"><input type="radio" name="uaSrc" value="manualUandA"> Manual U × A
             <input type="number" id="uManual" placeholder="U" step="0.1" style="width:80px">
@@ -334,6 +357,7 @@ footer.foot{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;di
         <fieldset>
           <legend>C<sub>room</sub> source</legend>
           <label class="opt"><input type="radio" name="cSrc" value="step2" id="cSrc_step2" checked> From step 2 (if available)</label>
+          <label class="opt"><input type="radio" name="cSrc" value="cal" id="cSrc_cal" disabled> <span id="cCalLbl">Field calibration (none usable yet)</span></label>
           <label class="opt"><input type="radio" name="cSrc" value="manual"> Manual C<sub>room</sub> (kJ/K) <input type="number" id="cManual" placeholder="e.g. 5000" step="1"></label>
         </fieldset>
         <div class="fields">
@@ -407,6 +431,8 @@ let extSeries=[], avgSeries=[];
 let gdRef=null;
 let baselineInternalT = null; // °C, captured from Initial window start
 let lastSS=null, lastSeason=null;
+let fanBands=null;      // [{t0,t1}] in ms, inlet fan running (TORPOR loads only)
+let loadedMeta=null;    // description of the loaded TORPOR data, for calibration entries
 
 /* ---- dark plot theme (TORPOR palette) ---- */
 const AX={gridcolor:'#1b2027',zerolinecolor:'#2a313a',linecolor:'#2a313a',tickfont:{family:'IBM Plex Mono, monospace',size:11,color:'#a3acb6'},title:{font:{size:11,color:'#636d78'}}};
@@ -546,7 +572,8 @@ function sniffDelimiter(line){
   return /\s+/;
 }
 
-function parseWideAndSetup(){
+function parseWideAndSetup(fromTorpor){
+  if (fromTorpor!==true){ fanBands=null; loadedMeta=null; }
   const raw=document.getElementById("wideData").value.trim();
   if (!raw){ alert("No data"); return; }
   const lines=raw.split(/\r?\n/).filter(s=>s.trim().length>0);
@@ -642,8 +669,12 @@ function drawStep2Plot(internalCols){
     unselected: { marker: { opacity: 0.25 } }
   });
 
+  const t0=timesMs[0];
+  const shapes=(fanBands||[]).map(b=>({type:'rect',xref:'x',yref:'paper',x0:(b.t0-t0)/60000,x1:(b.t1-t0)/60000,y0:0,y1:1,
+    fillcolor:'rgba(159,216,255,0.08)',line:{width:0},layer:'below'}));
   const layout=darkLayout({
-    title:"Temperature vs time",
+    title: fanBands ? "Temperature vs time (shaded = inlet fan on)" : "Temperature vs time",
+    shapes,
     dragmode:"select",
     selectdirection:"h",
     height:440,
@@ -666,16 +697,17 @@ function drawStep2Plot(internalCols){
 
       const idxs=pts.map(p=>p.pointIndex).sort((a,b)=>a-b);
       if (!firstSelection){
-        firstSelection=computeFirstByIndex(idxs);
+        firstSelection=computeFirstByIndex(idxs); firstSelection.idxs=idxs;
         drawFitLineByIndex(gd,idxs,"Initial","#d95926");
       } else if (!secondSelection){
-        secondSelection=computeSecondByIndex(idxs, firstSelection.Croom);
+        secondSelection=computeSecondByIndex(idxs, firstSelection.Croom); secondSelection.idxs=idxs;
         drawFitLineByIndex(gd,idxs,"Return","#199e70");
       }
       updateResults();
       const ready=!!(firstSelection && secondSelection);
       document.getElementById("tab3").disabled=!ready;
       document.getElementById("nextToStep3").disabled=!ready;
+      document.getElementById("copyCalBtn").disabled=!ready;
     });
   });
 }
@@ -788,6 +820,8 @@ function resetSelections(){
   document.getElementById("resultsBody").innerHTML=`<div class="col"><div class="muted">Awaiting selections…</div></div>`;
   document.getElementById("tab3").disabled=true;
   document.getElementById("nextToStep3").disabled=true;
+  document.getElementById("copyCalBtn").disabled=true;
+  document.getElementById("copyCalOut").classList.add("hidden");
   if (gdRef){
     // delete "Initial"/"Return" fit lines (delete from end to start to avoid index shift)
     const toDelete=[];
@@ -851,6 +885,7 @@ async function fetchHourlyTemps(lat,lon,a,b,tz="auto"){
 function getUA_ForStep4(){
   const src=document.querySelector('input[name="uaSrc"]:checked')?.value;
   if (src==="step2" && secondSelection?.UA) return Math.abs(secondSelection.UA);
+  if (src==="cal"){ const c=usableCalibration(); if (!c) throw new Error("No usable field calibration yet."); return c.UA_WK; }
   if (src==="manualUA"){ const v=+document.getElementById("uaManual").value; if (!(v>0)) throw new Error("Enter positive UA (W/K)"); return v; }
   if (src==="manualUandA"){ const u=+document.getElementById("uManual").value, a=+document.getElementById("aManual").value; if(!(u>0)||!(a>0)) throw new Error("Enter positive U and A"); return u*a; }
   throw new Error("UA source not set/available.");
@@ -858,6 +893,7 @@ function getUA_ForStep4(){
 function getC_ForStep4(){
   const src=document.querySelector('input[name="cSrc"]:checked')?.value;
   if (src==="step2" && firstSelection?.Croom) return Math.abs(firstSelection.Croom)*1000;
+  if (src==="cal"){ const c=usableCalibration(); if (!c) throw new Error("No usable field calibration yet."); return c.C_kJK*1000; }
   if (src==="manual"){ const kJ=+document.getElementById("cManual").value; if (!(kJ>0)) throw new Error("Enter positive Croom (kJ/K)"); return kJ*1000; }
   throw new Error("Croom source not set/available.");
 }
@@ -868,7 +904,8 @@ async function runSeasonal(){
   let UA, C_JK;
   try{ UA=getUA_ForStep4(); C_JK=getC_ForStep4(); }
   catch(e){ status.textContent="Error: "+(e.message||e); return; }
-  const fromExp = document.querySelector('input[name="uaSrc"]:checked')?.value==="step2" && document.querySelector('input[name="cSrc"]:checked')?.value==="step2";
+  const srcs=[document.querySelector('input[name="uaSrc"]:checked')?.value, document.querySelector('input[name="cSrc"]:checked')?.value];
+  const fromExp = srcs.every(v=>v==="step2"||v==="cal");
 
   const loc=document.getElementById("locInput").value.trim();
   const startISO=document.getElementById("startDate").value;
@@ -923,6 +960,123 @@ async function runSeasonal(){
   }
 }
 
+/* ---- TORPOR loader (Mead Adit, ThingSpeak) ---- */
+const TORPOR={ch1:'3535045', ch2:'3535049', tz:'America/New_York', inletFullCFM:700,
+  names:['S1 outside','S2 mid high','S3 mid low','S4 rear high','S5 rear low']};
+function easternStamp(ms){
+  return new Intl.DateTimeFormat('sv-SE',{timeZone:TORPOR.tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ms)).replace(',','');
+}
+function tsTime(x){ const t=x.trim(); return /^\d{4}-\d{2}-\d{2} \d{1,2}:\d{2}$/.test(t) ? t+':00' : t; }
+async function tsGet(ch,start,end,avg){
+  let u=`https://api.thingspeak.com/channels/${ch}/feeds.json?timezone=${encodeURIComponent(TORPOR.tz)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+  u += avg>0 ? `&average=${avg}` : '&results=8000';
+  const r=await fetch(u,{cache:'no-store'}); if(!r.ok) throw new Error(`ThingSpeak channel ${ch}: HTTP ${r.status}`);
+  const j=await r.json(); if(!Array.isArray(j.feeds)) throw new Error(`ThingSpeak channel ${ch}: no data returned`);
+  return j.feeds;
+}
+async function loadTorpor(){
+  const st=document.getElementById('tpStatus');
+  const a=document.getElementById('tpStart').value, b=document.getElementById('tpEnd').value;
+  if(!a||!b){ st.textContent='Enter a start and end time (YYYY-MM-DD HH:MM, Eastern).'; return; }
+  const start=tsTime(a), end=tsTime(b), avg=+document.getElementById('tpAvg').value;
+  const off=toNumOrNull(document.getElementById('tpOffset').value) ?? 0;
+  st.textContent='Fetching from ThingSpeak…';
+  try{
+    const [f1,f2]=await Promise.all([tsGet(TORPOR.ch1,start,end,avg), tsGet(TORPOR.ch2,start,end,avg)]);
+    const tenth=v=>{ const x=toNumOrNull(v); return x===null?null:x/10-off; };
+    const num=v=>toNumOrNull(v);
+    const by=new Map();
+    const row=(e)=>{ const t=Date.parse(e.created_at), k=Math.round(t/60000);
+      if(!by.has(k)) by.set(k,{t:k*60000, T:[null,null,null,null,null], fan1:null, fan2:null}); return by.get(k); };
+    f1.forEach(e=>{ const r=row(e); for(let i=0;i<4;i++) r.T[i]=tenth(e['field'+(2*i+2)]); });
+    f2.forEach(e=>{ const r=row(e); r.T[4]=tenth(e.field2); r.fan1=num(e.field3); r.fan2=num(e.field4); });
+    const rows=[...by.values()].filter(r=>r.T.some(v=>v!==null)).sort((x,y)=>x.t-y.t);
+    if(rows.length<3){ st.textContent='No data in that range.'; return; }
+    const lines=['datetime,'+TORPOR.names.join(',')];
+    rows.forEach(r=>lines.push(new Date(r.t).toISOString()+','+r.T.map(v=>v===null?'':v.toFixed(2)).join(',')));
+    document.getElementById('wideData').value=lines.join('\n');
+
+    // inlet-fan-on bands and nominal airflow
+    const step=(avg>0?avg:1)*60000; fanBands=[]; let cur=null; const onCmd=[];
+    rows.forEach(r=>{ const on=r.fan1!==null && r.fan1>0;
+      if(on){ onCmd.push(r.fan1); if(!cur) cur={t0:r.t-step/2,t1:r.t+step/2}; else cur.t1=r.t+step/2; }
+      else if(cur){ fanBands.push(cur); cur=null; } });
+    if(cur) fanBands.push(cur);
+    const meanCmd=onCmd.length? onCmd.reduce((p,q)=>p+q,0)/onCmd.length : null;
+    let cfmNote='Inlet fan off for the whole range; enter airflow by hand.';
+    if(meanCmd){ const cfm=Math.round(TORPOR.inletFullCFM*meanCmd/100); document.getElementById('cfm').value=cfm;
+      cfmNote=`Airflow set to ${cfm} CFM: nominal, from the mean inlet command while on (${meanCmd.toFixed(0)} % of ${TORPOR.inletFullCFM} CFM), not measured. The recirculation fan is not included.`; }
+    const fan2On=rows.some(r=>r.fan2!==null && r.fan2>0);
+    loadedMeta={source:`TORPOR / ThingSpeak ${TORPOR.ch1}+${TORPOR.ch2}`, start, end, step_min: avg>0?avg:1, offset_C: off, recirc_on: fan2On};
+    const truncated=(avg===0 && (f1.length>=8000||f2.length>=8000));
+    st.innerHTML=`Loaded ${rows.length} rows${truncated?' (hit the 8,000-row limit; shorten the range or use a mean time step)':''}. ${cfmNote}`+
+      (fan2On?' <b>Note:</b> the recirculation fan ran during part of this range, so a fan-off window is not passive recovery.':'');
+    parseWideAndSetup(true);
+  }catch(e){ st.textContent='Error: '+(e.message||e); }
+}
+
+/* ---- Field calibration log (calibrations.json) ---- */
+let CAL=null;
+function usableCalibration(){
+  return CAL?.entries?.find(e=>e.status==='usable' && Number.isFinite(e.UA_WK) && Number.isFinite(e.C_kJK)) || null;
+}
+function esc(x){ return String(x??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function renderCalLog(){
+  const box=document.getElementById('calLog');
+  if(!CAL?.entries?.length){ box.innerHTML='<div class="note2" style="padding:14px">No field calibrations recorded yet.</div>'; return; }
+  const stTag=s=>s==='usable'?'tag exp':(s==='provisional'?'tag man':'tag');
+  let h="<table class='ua-grid'><tr><th>Date</th><th>Site · event</th><th>UA (W/K)</th><th>C (kJ/K)</th><th>Status</th><th style='text-align:left'>What it shows</th></tr>";
+  CAL.entries.forEach(e=>{
+    const notes=(e.observations||[]).map(o=>`<li>${esc(o)}</li>`).join('')+(e.caveats||[]).map(o=>`<li><b>Caveat:</b> ${esc(o)}</li>`).join('');
+    h+=`<tr><td>${esc(e.date)}</td><td style="white-space:normal;text-align:left;min-width:180px">${esc(e.site)}<br><span style="color:var(--fg-3)">${esc(e.event)}</span></td>`+
+       `<td>${Number.isFinite(e.UA_WK)?fmt(e.UA_WK,0):'—'}</td><td>${Number.isFinite(e.C_kJK)?fmt(e.C_kJK,0):'—'}</td>`+
+       `<td><span class="${stTag(e.status)}">${esc(e.status)}</span></td>`+
+       `<td style="white-space:normal;text-align:left;font-family:var(--f-body);min-width:320px"><ul style="margin:0;padding-left:18px">${notes}</ul></td></tr>`;
+  });
+  box.innerHTML=h+'</table>';
+  const u=usableCalibration();
+  ['uaSrc_cal','cSrc_cal'].forEach(id=>document.getElementById(id).disabled=!u);
+  if(u){
+    document.getElementById('uaCalLbl').textContent=`Field calibration: ${u.site}, ${u.date} (UA ${fmt(u.UA_WK,0)} W/K)`;
+    document.getElementById('cCalLbl').textContent=`Field calibration: ${u.site}, ${u.date} (C ${fmt(u.C_kJK,0)} kJ/K)`;
+  }
+}
+async function loadCalibrations(){
+  try{ const r=await fetch('calibrations.json',{cache:'no-store'}); if(!r.ok) throw new Error(r.status); CAL=await r.json(); }
+  catch(e){ CAL=null; }
+  renderCalLog();
+}
+function copyCalibrationEntry(){
+  if(!firstSelection||!secondSelection) return;
+  const iso=i=>new Date(timesMs[i]).toISOString();
+  const w=s=>s.idxs?{from:iso(s.idxs[0]),to:iso(s.idxs[s.idxs.length-1])}:null;
+  const f=flowFromInputs();
+  const entry={
+    id: todayISO()+'-'+(loadedMeta?'mead':'site'),
+    date: todayISO(),
+    site: loadedMeta?'Mead Adit, Carp Lake Mine':'',
+    event: '',
+    status: 'provisional',
+    UA_WK: Number(Math.abs(secondSelection.UA).toFixed(1)),
+    C_kJK: Number(Math.abs(firstSelection.Croom).toFixed(1)),
+    cfm: Math.round(f.q_m3s/CFM_TO_M3S),
+    outside_column: colNames[1+extColIndex],
+    internal_columns: internalColIndices.map(i=>colNames[1+i]),
+    initial_window: w(firstSelection), return_window: w(secondSelection),
+    data: loadedMeta||'pasted logger data',
+    observations: [], caveats: []
+  };
+  const out=document.getElementById('copyCalText'); out.value=JSON.stringify(entry,null,2);
+  document.getElementById('copyCalOut').classList.remove('hidden');
+  try{ navigator.clipboard?.writeText(out.value).catch(()=>{}); }catch(e){}
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const now=Date.now();
+  document.getElementById('tpStart').value=easternStamp(now-24*3600e3);
+  document.getElementById('tpEnd').value=easternStamp(now);
+  loadCalibrations();
+});
 document.addEventListener('DOMContentLoaded', runDirectUA);
 </script>
 </body>

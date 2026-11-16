@@ -1,0 +1,29 @@
+{
+  "about": "Field calibrations for the heat-exchange tool, newest first. status: 'usable' (UA and C trusted; offered in step 4), 'provisional' (fitted but not yet trusted), 'not usable' (event recorded for what it shows, no UA/C). Temperatures are corrected for the provisional +1.5 °C sensor offset unless stated.",
+  "entries": [
+    {
+      "id": "2026-11-16-mead-warm-shutoff",
+      "date": "2026-11-16",
+      "site": "Mead Adit, Carp Lake Mine",
+      "event": "Inlet fan stopped by warm weather (10:33 EST); recirculation fan stayed at 20%",
+      "status": "not usable",
+      "UA_WK": null,
+      "C_kJK": null,
+      "cfm": null,
+      "data": "TORPOR / ThingSpeak 3535045+3535049, 1-min, 2026-11-15 06:00 to 2026-11-16 14:46 EST",
+      "observations": [
+        "Overnight with the inlet fan at 80%: outside ~2.9 °C, middle of the chamber (S2/S3, by the mixing box) ~5.5 °C, rear of the experimental area (S4/S5) ~7.3 °C. A gradient of ~1.8 °C from the middle to the rear.",
+        "Middle of the chamber warmed ~0.5 °C in the first hour after shutoff, then levelled off near 6.8 °C (exponential fit: tau ~74 min, rise ~0.3 °C from 10:33).",
+        "Rear warmed only ~0.2 °C in 4 h (7.7 to 7.9 °C), close to the 0.1 °C sensor resolution; no time constant can be fitted.",
+        "Most of the rear's warming came in the 90 min before shutoff, while the inlet was pulling in outside air that was warming fast.",
+        "Four hours after shutoff the middle of the chamber was still below the deep temperature, which suggests the rock stores some of the cooling. The tool currently holds rock temperature fixed."
+      ],
+      "caveats": [
+        "Recirculation fan ran throughout, so this is not passive recovery.",
+        "No clean Initial (fan-on, room cooling) window, so C cannot be estimated.",
+        "After the common 1.5 °C correction the rear sensors read 0.3-0.5 °C above the 80 m control HOBO (7.4 °C); the provisional offset may not fit every sensor."
+      ],
+      "wanted": "A clean trial: inlet and recirculation fans both off for 12 h or more after a long cold run (to be arranged with the TORPOR engineering team)."
+    }
+  ]
+}
